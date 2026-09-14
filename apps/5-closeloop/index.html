@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseLoop — Escrow Reconciliation Console</title>
+<style>
+:root{
+  --slate:#64748b; --slate-2:#334155; --slate-3:#1e293b;
+  --gold:#eab308; --gold-soft:#facc15;
+  --bg:#0a0f1a; --panel:rgba(30,41,59,.55); --line:rgba(148,163,184,.18);
+  --txt:#e2e8f0; --muted:#94a3b8; --green:#22c55e; --red:#f43f5e;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:
+  radial-gradient(1200px 600px at 80% -10%,rgba(234,179,8,.10),transparent 60%),
+  radial-gradient(900px 500px at -10% 20%,rgba(100,116,139,.16),transparent 55%),
+  var(--bg);color:var(--txt);min-height:100vh}
+a{color:var(--gold)}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 24px 80px}
+header{display:flex;align-items:center;gap:16px;margin-bottom:6px}
+.logo{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--gold),#a16207);color:#0a0f1a;font-weight:800;
+  font-size:20px;box-shadow:0 0 28px rgba(234,179,8,.35)}
+h1{font-size:22px;margin:0;letter-spacing:.5px}
+h1 span{color:var(--gold)}
+.sub{color:var(--muted);font-size:12.5px;margin-top:2px;letter-spacing:.4px}
+.badge{margin-left:auto;font-size:11px;padding:6px 12px;border:1px solid var(--line);
+  border-radius:999px;color:var(--muted);background:rgba(15,23,42,.5)}
+.badge b{color:var(--gold-soft)}
+.glass{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  backdrop-filter:blur(10px);box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.hero{margin:22px 0;padding:22px 24px}
+.hero h2{margin:0 0 4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.timeline{display:flex;align-items:flex-start;gap:0;margin-top:20px}
+.tl-node{flex:1;position:relative;text-align:center}
+.tl-node:not(:last-child)::after{content:"";position:absolute;top:16px;left:50%;width:100%;
+  height:2px;background:linear-gradient(90deg,var(--slate),rgba(100,116,139,.2))}
+.tl-node.done:not(:last-child)::after{background:linear-gradient(90deg,var(--gold),var(--gold-soft))}
+.dot{width:34px;height:34px;border-radius:50%;margin:0 auto;display:grid;place-items:center;
+  position:relative;z-index:2;border:2px solid var(--slate);background:var(--slate-3);
+  font-size:14px;color:var(--muted)}
+.tl-node.done .dot{border-color:var(--gold);background:linear-gradient(135deg,var(--gold),#a16207);
+  color:#0a0f1a;box-shadow:0 0 18px rgba(234,179,8,.5)}
+.tl-node.warn .dot{border-color:var(--red);background:var(--red);color:#fff;box-shadow:0 0 18px rgba(244,63,94,.5)}
+.tl-lbl{margin-top:9px;font-size:12px;font-weight:600;text-transform:capitalize}
+.tl-money{font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.3px}
+.tl-money.miss{color:var(--red);font-weight:700}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+.section-t{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin:0 0 12px}
+.tx{padding:13px 15px;border:1px solid var(--line);border-radius:12px;margin-bottom:11px;
+  cursor:pointer;transition:.15s;background:rgba(15,23,42,.4)}
+.tx:hover{border-color:var(--gold);transform:translateY(-1px)}
+.tx.active{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.tx-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tx-id{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+.tx-prop{font-size:13.5px;font-weight:600;margin:5px 0 6px;line-height:1.35}
+.tx-bot{display:flex;justify-content:space-between;align-items:center}
+.oob{font-size:12px;font-family:ui-monospace,monospace}
+.oob.bad{color:var(--red)} .oob.ok{color:var(--green)}
+.st{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.6px}
+.st.Balanced{background:rgba(100,116,139,.25);color:#cbd5e1}
+.st.Cleared{background:rgba(34,197,94,.18);color:var(--green)}
+.st.Exceptions{background:rgba(244,63,94,.16);color:var(--red)}
+.panel{padding:22px 24px;min-height:320px}
+.panel h3{margin:0;font-size:18px}
+.panel .meta{color:var(--muted);font-size:12.5px;margin:6px 0 18px}
+.led{width:100%;border-collapse:collapse;font-size:13px}
+.led th{text-align:left;color:var(--muted);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:1px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.led td{padding:10px;border-bottom:1px solid rgba(148,163,184,.08);font-family:ui-monospace,monospace}
+.led td.lbl{font-family:inherit;font-weight:600}
+.led .num{text-align:right}
+.led tr.miss{background:rgba(244,63,94,.07)}
+.led tr.miss td.exp{color:var(--green)} .led tr.miss td.act{color:var(--red)}
+.varpill{font-family:ui-monospace,monospace;font-size:11.5px;padding:2px 8px;border-radius:6px}
+.varpill.z{color:var(--muted)} .varpill.p{color:var(--red);background:rgba(244,63,94,.12)}
+.varpill.n{color:var(--gold-soft);background:rgba(234,179,8,.12)}
+.btnrow{margin:20px 0 6px;display:flex;gap:12px;align-items:center}
+.btn{background:linear-gradient(135deg,var(--gold),#a16207);color:#0a0f1a;border:0;
+  padding:11px 20px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;letter-spacing:.3px}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.foot-net{margin-left:auto;font-family:ui-monospace,monospace;font-size:13px}
+.exc{border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:13px 15px;margin-bottom:12px;background:rgba(15,23,42,.45)}
+.exc.critical{border-left-color:var(--red)} .exc.high{border-left-color:#fb923c}
+.exc.medium{border-left-color:var(--gold)} .exc.low{border-left-color:var(--slate)}
+.exc-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.exc-t{font-weight:700;font-size:13px}
+.sev{font-size:9.5px;font-weight:800;text-transform:uppercase;padding:3px 8px;border-radius:6px;letter-spacing:.6px}
+.sev.critical{background:var(--red);color:#fff}.sev.high{background:#fb923c;color:#0a0f1a}
+.sev.medium{background:var(--gold);color:#0a0f1a}.sev.low{background:var(--slate);color:#fff}
+.exc-var{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);margin:6px 0 8px}
+.exc-ai{font-size:12.5px;line-height:1.55;color:#cbd5e1;border-top:1px dashed var(--line);padding-top:9px}
+.exc-ai b{color:var(--gold-soft)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+.mini{padding:18px 20px}
+.kpi{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(148,163,184,.08);font-size:13px}
+.kpi:last-child{border:0}.kpi .v{font-family:ui-monospace,monospace;color:var(--gold-soft);font-weight:700}
+.ambient{border:1px solid rgba(234,179,8,.3);background:
+  linear-gradient(135deg,rgba(234,179,8,.06),rgba(15,23,42,.5))}
+.amb-tag{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:1.5px;
+  color:#0a0f1a;background:var(--gold);padding:3px 9px;border-radius:6px}
+.amb-line{display:flex;gap:10px;font-size:12.5px;padding:7px 0;color:#cbd5e1;align-items:flex-start}
+.amb-line .k{color:var(--gold-soft);font-family:ui-monospace,monospace;font-size:11px;min-width:52px}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);
+  animation:p 1.6s infinite;margin-top:4px}
+@keyframes p{0%,100%{opacity:.4}50%{opacity:1}}
+.btn.sm{padding:6px 13px;font-size:11.5px;border-radius:8px}
+.exc.resolved{opacity:.72;border-left-color:var(--green)}
+.exc-act{margin-top:10px}
+.exc-res{margin-top:9px;font-size:11.5px;color:var(--green);font-weight:600;letter-spacing:.2px}
+.sev.resolved,.exc.resolved .sev{background:rgba(34,197,94,.2);color:var(--green)}
+.rd-panel{border:1px solid var(--line);border-radius:12px;padding:6px 4px;background:rgba(15,23,42,.4)}
+.rd-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(148,163,184,.08)}
+.rd-row:last-of-type{border-bottom:0}
+.rd-mark{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  font-size:12px;font-weight:800;flex:0 0 auto}
+.rd-row.pass .rd-mark{background:rgba(34,197,94,.18);color:var(--green)}
+.rd-row.fail .rd-mark{background:rgba(244,63,94,.16);color:var(--red)}
+.rd-lbl{flex:1;font-size:13px;font-weight:600;display:flex;flex-direction:column}
+.rd-det{font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
+.rd-st{font-size:9.5px;font-weight:800;letter-spacing:.6px;padding:3px 9px;border-radius:6px}
+.rd-st.pass{background:rgba(34,197,94,.18);color:var(--green)}
+.rd-st.fail{background:rgba(244,63,94,.16);color:var(--red)}
+.rd-verdict{display:flex;justify-content:space-between;align-items:center;margin:8px 6px 4px;
+  padding:12px 16px;border-radius:10px;border:1px solid}
+.rd-verdict.ok{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.5)}
+.rd-verdict.bad{background:rgba(244,63,94,.08);border-color:rgba(244,63,94,.45)}
+.rd-verdict .ctf{font-weight:800;letter-spacing:1px;font-size:14px}
+.rd-verdict.ok .ctf{color:var(--green)} .rd-verdict.bad .ctf{color:var(--red)}
+.rd-verdict .ctf-sub{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:60px 0}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#0a0f1a;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">CL</div>
+    <div>
+      <h1>Close<span>Loop</span></h1>
+      <div class="sub">Escrow Reconciliation Console · earnest → funded</div>
+    </div>
+    <div class="badge">AI engine <b id="aimode">…</b> · port 8805</div>
+  </header>
+
+  <div class="glass hero">
+    <h2>Closing Timeline — <span id="hero-prop">select a transaction</span></h2>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div class="grid">
+    <div class="glass" style="padding:18px 18px 8px">
+      <p class="section-t">Transactions</p>
+      <div id="txlist"></div>
+    </div>
+
+    <div class="glass panel" id="detail">
+      <div class="empty">← Select a transaction to open its expected-vs-actual ledger.</div>
+    </div>
+  </div>
+
+  <div class="cols2">
+    <div class="glass mini">
+      <p class="section-t">Portfolio Intelligence</p>
+      <div id="portfolio"></div>
+    </div>
+    <div class="glass mini ambient">
+      <span class="amb-tag">AMBIENT MODE · 2036</span>
+      <p style="margin:12px 0 4px;font-size:13px;font-weight:600">Autonomous Closing Coordinator</p>
+      <div id="ambient"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const money = n => '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const MIL_ICON = {earnest:'◆',inspection:'⌂',appraisal:'▲',clear:'✓',funded:'★'};
+let current = null;
+
+async function boot(){
+  const h = await (await fetch('/api/health')).json();
+  $('#aimode').textContent = h.ai;
+  await loadList();
+  await loadPortfolio();
+}
+
+async function loadList(){
+  const {transactions} = await (await fetch('/api/transactions')).json();
+  const box = $('#txlist'); box.innerHTML='';
+  transactions.forEach(t=>{
+    const d=document.createElement('div');
+    d.className='tx'+(current===t.id?' active':'');
+    const bad=t.out_of_balance>0;
+    d.innerHTML=`<div class="tx-top"><span class="tx-id">${t.id}</span>
+      <span class="st ${t.status}">${t.status}</span></div>
+      <div class="tx-prop">${t.property}</div>
+      <div class="tx-bot">
+        <span class="oob ${bad?'bad':'ok'}">${bad?'▲ '+money(t.out_of_balance)+' out':'in balance'}</span>
+        <span class="tx-id">${t.days_to_close}d · ${t.milestone}</span></div>`;
+    d.onclick=()=>openTxn(t.id);
+    box.appendChild(d);
+  });
+  if(!current && transactions.length) openTxn(transactions[0].id);
+}
+
+function renderTimeline(mils){
+  const el=$('#timeline'); el.innerHTML='';
+  mils.forEach(m=>{
+    const warn = m.money_state==='MISSING';
+    const cls = warn?'warn':(m.reached?'done':'');
+    const n=document.createElement('div');
+    n.className='tl-node '+cls;
+    n.innerHTML=`<div class="dot">${MIL_ICON[m.name]}</div>
+      <div class="tl-lbl">${m.name==='clear'?'clear-to-close':m.name}</div>
+      <div class="tl-money ${warn?'miss':''}">${m.money_state}</div>`;
+    el.appendChild(n);
+  });
+}
+
+async function openTxn(id){
+  current=id;
+  [...document.querySelectorAll('.tx')].forEach(e=>e.classList.remove('active'));
+  const t = await (await fetch('/api/transaction/'+id)).json();
+  $('#hero-prop').textContent = t.property;
+  renderTimeline(t.milestones);
+  await loadList();
+
+  let rows='';
+  t.ledger.forEach(r=>{
+    const v=r.variance, cls=v>0?'p':(v<0?'n':'z');
+    const vtxt = v===0?'—':(v>0?'+':'')+money(v).replace('$','$');
+    rows+=`<tr class="${r.mismatch?'miss':''}">
+      <td class="lbl">${r.label}</td>
+      <td class="num exp">${money(r.expected)}</td>
+      <td class="num act">${money(r.actual)}</td>
+      <td class="num"><span class="varpill ${cls}">${vtxt}</span></td></tr>`;
+  });
+  const net = t.ledger.reduce((a,r)=>a+r.variance,0);
+  const bad=t.out_of_balance>0;
+  $('#detail').innerHTML=`
+    <h3>${t.id} — ${t.property}</h3>
+    <div class="meta">Buyer ${t.buyer} · Seller ${t.seller} · closes ${t.close_date} ·
+      <span class="st ${t.status}">${t.status}</span></div>
+    <table class="led"><thead><tr>
+      <th>Line Item</th><th class="num">Expected</th><th class="num">Actual</th><th class="num">Variance</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <div class="btnrow">
+      <button class="btn" id="recBtn" ${bad?'':'disabled'}>Run Reconciliation${bad?'':' — balanced'}</button>
+      <a class="btn ghost" id="packetBtn" href="/closing-packet/${t.id}" target="_blank" rel="noopener">Download closing packet</a>
+      <span class="foot-net">Net variance:
+        <b style="color:${Math.abs(net)>0.005?'var(--red)':'var(--green)'}">${net>0?'+':''}${money(net)}</b></span>
+    </div>
+    <div id="readybox" style="margin-top:20px"></div>
+    <div id="excbox" style="margin-top:14px"></div>`;
+  if(bad) $('#recBtn').onclick=()=>runReconcile(id);
+  loadReadiness(id);
+}
+
+async function loadReadiness(id){
+  const r = await (await fetch('/api/readiness/'+id)).json();
+  const box=$('#readybox'); if(!box) return;
+  const rows = r.checks.map(c=>`
+    <div class="rd-row ${c.pass?'pass':'fail'}">
+      <span class="rd-mark">${c.pass?'✓':'✕'}</span>
+      <span class="rd-lbl">${c.label}<span class="rd-det">${c.detail}</span></span>
+      <span class="rd-st ${c.pass?'pass':'fail'}">${c.pass?'PASS':'FAIL'}</span>
+    </div>`).join('');
+  box.innerHTML=`
+    <p class="section-t">Funding Readiness</p>
+    <div class="rd-panel">
+      ${rows}
+      <div class="rd-verdict ${r.clear_to_fund?'ok':'bad'}">
+        <span class="ctf">${r.verdict}</span>
+        <span class="ctf-sub">${r.passed} / ${r.total} checks passed</span>
+      </div>
+    </div>`;
+}
+
+async function runReconcile(id){
+  const b=$('#recBtn'); b.disabled=true; b.innerHTML='<span class="spin"></span> Analyzing…';
+  const r = await (await fetch('/api/reconcile',{method:'POST',
+    headers:{'content-type':'application/json'},body:JSON.stringify({txn_id:id})})).json();
+  const box=$('#excbox'); box.innerHTML='';
+  if(!r.exceptions.length){box.innerHTML='<div class="empty">No exceptions — fully reconciled.</div>';return;}
+  const hdr=document.createElement('p');
+  hdr.className='section-t';
+  hdr.innerHTML=`Exceptions (${r.exceptions.length}) · ${money(r.out_of_balance)} out of balance · AI ${r.ai_mode}`;
+  box.appendChild(hdr);
+  r.exceptions.forEach(e=>{
+    const v=e.variance;
+    const d=document.createElement('div');
+    d.className='exc '+e.severity+(e.resolved?' resolved':'');
+    let action;
+    if(e.resolved){
+      const rz=e.resolution||{};
+      action=`<div class="exc-res">✓ Resolved by ${rz.resolved_by||'—'}${rz.resolved_at?' · '+rz.resolved_at:''}${rz.note?' — '+rz.note:''}</div>`;
+    }else{
+      action=`<div class="exc-act">
+        <button class="btn ghost sm" data-exc="${e.id}">Resolve</button></div>`;
+    }
+    d.innerHTML=`<div class="exc-h"><span class="exc-t">${e.label} — ${e.type.replace(/_/g,' ')}</span>
+      <span class="sev ${e.severity}">${e.resolved?'resolved':e.severity}</span></div>
+      <div class="exc-var">expected ${money(e.expected)} · actual ${money(e.actual)} ·
+        variance ${v>0?'+':''}${money(v)}</div>
+      <div class="exc-ai"><b>Analyst:</b> ${e.ai}</div>${action}`;
+    box.appendChild(d);
+    const rb=d.querySelector('[data-exc]');
+    if(rb) rb.onclick=()=>resolveExc(id, e.id, rb);
+  });
+  b.innerHTML='Re-run Reconciliation'; b.disabled=false; b.onclick=()=>runReconcile(id);
+}
+
+async function resolveExc(txnId, excId, btn){
+  const note = (prompt('Resolution note (who confirmed / how it was fixed):','') || '').trim();
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Resolving…';
+  await fetch('/api/resolve',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({txn_id:txnId, exception_id:excId, note})});
+  await runReconcile(txnId);
+  await loadReadiness(txnId);
+  await loadList();
+  await loadPortfolio();
+}
+
+async function loadPortfolio(){
+  const p = await (await fetch('/api/portfolio')).json();
+  $('#portfolio').innerHTML=`
+    <div class="kpi"><span>Avg time-to-close</span><span class="v">${p.avg_time_to_close} days</span></div>
+    <div class="kpi"><span>Transactions monitored</span><span class="v">${p.total_transactions}</span></div>
+    <div class="kpi"><span>With open exceptions</span><span class="v">${p.with_exceptions}</span></div>
+    <div class="kpi"><span>Most common exception</span><span class="v">${p.most_common_exception.replace(/_/g,' ')}</span></div>
+    <div class="kpi"><span>Cleared & funded</span><span class="v">${p.cleared}</span></div>
+    <div class="kpi"><span>Total out of balance</span><span class="v">${money(p.total_out_of_balance)}</span></div>`;
+  $('#ambient').innerHTML=`
+    <div class="amb-line"><span class="pulse"></span>
+      <div><span class="k">SCAN</span> monitoring ${p.total_transactions} live escrows · ${p.with_exceptions} need attention</div></div>
+    <div class="amb-line"><span class="k">DETECT</span>
+      <div>TX-4022 — earnest deposit not received (${money(12000)} expected)</div></div>
+    <div class="amb-line"><span class="k">CHASE</span>
+      <div>Agent auto-drafted a wire-confirmation request to the buyer's agent & set a 24h SLA timer.</div></div>
+    <div class="amb-line"><span class="k">CLEAR</span>
+      <div>On receipt, will reconcile the escrow ledger and advance the milestone to <b>inspection</b> — no human touch.</div></div>`;
+}
+
+boot();
+</script>
+</body>
+</html>

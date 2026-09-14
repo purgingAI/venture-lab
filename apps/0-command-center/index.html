@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Command Center · Venture Lab</title>
+<style>
+  :root{
+    --bg:#05060c; --bg2:#0a0b16;
+    --violet:#a855f7; --violet-2:#c084fc; --violet-glow:rgba(168,85,247,.55);
+    --ink:#e7e9f5; --muted:#8a8fb0; --line:rgba(168,85,247,.16);
+    --glass:rgba(20,18,38,.55); --up:#4ade80; --down:#64607a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 700px at 78% -10%,rgba(168,85,247,.16),transparent 60%),
+               radial-gradient(900px 600px at 8% 108%,rgba(56,189,248,.10),transparent 55%),
+               var(--bg);
+    color:var(--ink);
+    font:14px/1.5 "SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  #stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .mesh{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:
+      repeating-linear-gradient(90deg,transparent 0 78px,rgba(168,85,247,.05) 78px 79px),
+      repeating-linear-gradient(0deg,transparent 0 78px,rgba(168,85,247,.05) 78px 79px);
+    mask:radial-gradient(700px 500px at 50% 22%,#000 0%,transparent 80%);
+    animation:drift 34s linear infinite;
+  }
+  @keyframes drift{from{background-position:0 0,0 0}to{background-position:158px 158px,158px 158px}}
+  .wrap{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:34px 22px 60px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:44px;height:44px;border-radius:13px;position:relative;flex:none;
+    background:linear-gradient(145deg,#1b1330,#0c0a1c);
+    border:1px solid var(--line);
+    box-shadow:0 0 26px var(--violet-glow),inset 0 0 20px rgba(168,85,247,.18)}
+  .logo::before,.logo::after{content:"";position:absolute;inset:0;margin:auto;border-radius:50%}
+  .logo::before{width:20px;height:20px;border:2px solid var(--violet);box-shadow:0 0 14px var(--violet-glow)}
+  .logo::after{width:6px;height:6px;background:var(--violet-2);box-shadow:0 0 12px var(--violet-2)}
+  h1{margin:0;font-size:20px;letter-spacing:2.5px;font-weight:700;
+    background:linear-gradient(90deg,#fff,var(--violet-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-top:3px}
+
+  .kpis{display:flex;gap:12px;flex-wrap:wrap}
+  .kpi{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:12px 18px;
+    min-width:118px;backdrop-filter:blur(9px);position:relative;overflow:hidden}
+  .kpi .v{font-size:24px;font-weight:700;letter-spacing:.5px}
+  .kpi .l{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .kpi.on .v{color:var(--up)}
+  .kpi.sig .v{color:var(--violet-2);text-shadow:0 0 20px var(--violet-glow)}
+  .kpi::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;
+    background:linear-gradient(90deg,transparent,var(--violet),transparent);opacity:.7}
+
+  .bar{display:flex;align-items:center;gap:10px;margin:22px 2px 16px;color:var(--muted);font-size:11px;letter-spacing:2px}
+  .bar .line{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+  .live{display:inline-flex;align-items:center;gap:7px;color:var(--violet-2)}
+  .live i{width:7px;height:7px;border-radius:50%;background:var(--violet);box-shadow:0 0 10px var(--violet);animation:beat 1.6s infinite}
+  @keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+  .tile{position:relative;background:var(--glass);border:1px solid var(--line);border-radius:18px;
+    padding:17px 17px 15px;backdrop-filter:blur(11px);overflow:hidden;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .25s ease}
+  .tile::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1px;pointer-events:none;
+    background:linear-gradient(140deg,var(--tc,var(--violet)),transparent 55%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;opacity:.4}
+  .tile::after{content:"";position:absolute;right:-40px;top:-40px;width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle,var(--tc,var(--violet)),transparent 70%);opacity:.10;pointer-events:none}
+  .tile:hover{transform:translateY(-3px);border-color:var(--tc,var(--violet));
+    box-shadow:0 12px 40px -12px var(--tc,var(--violet-glow))}
+  .tile.down{opacity:.62}
+  .tile.down::after{background:radial-gradient(circle,#3a3550,transparent 70%)}
+
+  .thead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tname{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;letter-spacing:.4px}
+  .swatch{width:10px;height:10px;border-radius:3px;background:var(--tc,var(--violet));
+    box-shadow:0 0 12px var(--tc,var(--violet-glow));flex:none}
+  .dot{font-size:13px;line-height:1}
+  .dot.up{color:var(--up);text-shadow:0 0 10px rgba(74,222,128,.8);animation:pulse 2s infinite}
+  .dot.down{color:var(--down)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .ttag{color:var(--muted);font-size:10.5px;letter-spacing:.5px;margin:6px 0 13px;min-height:14px}
+
+  .metric{font-size:29px;font-weight:800;letter-spacing:.5px;line-height:1;
+    color:#fff;text-shadow:0 0 22px var(--tc,transparent)}
+  .tile.down .metric{color:var(--down);text-shadow:none;font-size:22px}
+  .mlabel{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .msub{font-size:11px;color:var(--tc,var(--violet-2));margin-top:9px;opacity:.9}
+  .tile.down .msub{color:var(--down)}
+
+  .foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;
+    padding-top:11px;border-top:1px solid var(--line)}
+  .port{font-size:10.5px;color:var(--muted);letter-spacing:1px}
+  .open{font-size:11px;text-decoration:none;color:var(--tc,var(--violet-2));
+    border:1px solid var(--tc,var(--line));padding:4px 11px;border-radius:9px;
+    transition:background .15s;letter-spacing:.5px}
+  .open:hover{background:var(--tc,var(--violet));color:#0a0812}
+  .tile.down .open{pointer-events:none;opacity:.4;color:var(--muted);border-color:var(--line)}
+
+  /* ---- Autonomous Operations feed ---- */
+  .ops{margin-top:30px;background:var(--glass);border:1px solid var(--line);border-radius:18px;
+    backdrop-filter:blur(11px);overflow:hidden;position:relative}
+  .ops::after{content:"";position:absolute;left:-60px;top:-60px;width:180px;height:180px;border-radius:50%;
+    background:radial-gradient(circle,var(--violet),transparent 70%);opacity:.08;pointer-events:none}
+  .ops-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    padding:15px 18px;border-bottom:1px solid var(--line)}
+  .ops-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:2px}
+  .ops-title .orb{width:9px;height:9px;border-radius:50%;background:var(--violet);
+    box-shadow:0 0 12px var(--violet);animation:beat 1.6s infinite}
+  .ops-stat{font-size:11px;letter-spacing:.6px;color:var(--muted)}
+  .ops-stat b{color:var(--violet-2);text-shadow:0 0 16px var(--violet-glow);font-size:14px}
+  .ops-stat b.run{color:var(--up);text-shadow:0 0 16px rgba(74,222,128,.6)}
+  .feed{max-height:340px;overflow-y:auto;padding:6px 0}
+  .feed::-webkit-scrollbar{width:8px}
+  .feed::-webkit-scrollbar-thumb{background:rgba(168,85,247,.25);border-radius:8px}
+  .row{display:flex;align-items:flex-start;gap:11px;padding:9px 18px;
+    border-bottom:1px solid rgba(168,85,247,.06);transition:background .15s}
+  .row:last-child{border-bottom:none}
+  .row:hover{background:rgba(168,85,247,.05)}
+  .chip{flex:none;font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:8px;
+    color:var(--rc,var(--violet-2));border:1px solid var(--rc,var(--line));
+    background:color-mix(in srgb,var(--rc,var(--violet)) 12%,transparent);white-space:nowrap;margin-top:1px}
+  .act{flex:1;font-size:12.5px;color:var(--ink);line-height:1.45;word-break:break-word}
+  .rts{flex:none;font-size:10px;color:var(--muted);letter-spacing:.4px;margin-top:2px;white-space:nowrap}
+  .feed-empty{padding:26px 18px;text-align:center;color:var(--muted);font-size:11.5px;letter-spacing:1px}
+
+  footer{margin-top:34px;text-align:center;color:var(--muted);font-size:10.5px;letter-spacing:2px}
+  .err{color:#fb7185}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="mesh"></div>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>COMMAND CENTER</h1>
+        <div class="sub">Venture Lab · Fleet Operations</div>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi on"><div class="v" id="k-online">–</div><div class="l">Apps Online</div></div>
+      <div class="kpi sig"><div class="v" id="k-signals">–</div><div class="l">Revenue Signals</div></div>
+      <div class="kpi"><div class="v" id="k-total">–</div><div class="l">Fleet Size</div></div>
+    </div>
+  </header>
+
+  <div class="bar">
+    <span class="live"><i></i> LIVE</span>
+    <span class="line"></span>
+    <span id="stamp">connecting…</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <section class="ops">
+    <div class="ops-head">
+      <div class="ops-title"><span class="orb"></span> AUTONOMOUS OPERATIONS</div>
+      <div class="ops-stat" id="ops-stat">standing by…</div>
+    </div>
+    <div class="feed" id="feed">
+      <div class="feed-empty">awaiting agent activity…</div>
+    </div>
+  </section>
+
+  <footer>AUTO-REFRESH 5s · STDLIB ONLY · PORT 8811 · <span id="fleet-err"></span></footer>
+</div>
+
+<script>
+// ---- starfield -----------------------------------------------------------
+const cv=document.getElementById('stars'),cx=cv.getContext('2d');
+let stars=[];
+function resize(){cv.width=innerWidth;cv.height=innerHeight;
+  stars=Array.from({length:150},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,
+    z:Math.random()*.8+.2,r:Math.random()*1.4+.2}));}
+addEventListener('resize',resize);resize();
+function twinkle(t){cx.clearRect(0,0,cv.width,cv.height);
+  for(const s of stars){const a=.35+.35*Math.sin(t/700*s.z+s.x);
+    cx.beginPath();cx.arc(s.x,s.y,s.r,0,7);
+    cx.fillStyle=`rgba(${200-s.z*40},${170},255,${a})`;cx.fill();
+    s.y+=s.z*.06;if(s.y>cv.height){s.y=0;s.x=Math.random()*cv.width;}}
+  requestAnimationFrame(twinkle);}
+requestAnimationFrame(twinkle);
+
+// ---- fleet ---------------------------------------------------------------
+const grid=document.getElementById('grid');
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function render(data){
+  const s=data.summary||{};
+  document.getElementById('k-online').textContent=(s.online??'–')+(s.total?('/'+s.total):'');
+  document.getElementById('k-signals').textContent=s.revenue_signals??'–';
+  document.getElementById('k-total').textContent=s.total??'–';
+  document.getElementById('fleet-err').innerHTML=data.error?('<span class="err">poll error: '+esc(data.error)+'</span>'):'';
+
+  grid.innerHTML=(data.tiles||[]).map(t=>{
+    const up=t.online;
+    return `<div class="tile ${up?'':'down'}" style="--tc:${esc(t.color)}">
+      <div class="thead">
+        <div class="tname"><span class="swatch"></span>${esc(t.name)}</div>
+        <span class="dot ${up?'up':'down'}">${up?'●':'○'}</span>
+      </div>
+      <div class="ttag">${esc(t.tag)}</div>
+      <div class="metric">${esc(t.metric)}</div>
+      <div class="mlabel">${esc(t.metric_label||(up?'':'status'))}</div>
+      <div class="msub">${esc(t.sub||'')}</div>
+      <div class="foot">
+        <span class="port">:${esc(t.port)}</span>
+        <a class="open" href="${esc(t.url)}" target="_blank" rel="noopener">Open →</a>
+      </div>
+    </div>`;
+  }).join('');
+
+  const d=new Date();
+  document.getElementById('stamp').textContent='synced '+d.toLocaleTimeString();
+}
+
+async function tick(){
+  try{
+    const r=await fetch('/api/fleet',{cache:'no-store'});
+    render(await r.json());
+  }catch(e){
+    document.getElementById('stamp').textContent='reconnecting…';
+  }
+}
+
+// ---- autonomous operations feed -----------------------------------------
+const feed=document.getElementById('feed');
+function fmtTs(ts){
+  if(!ts) return '';
+  const d=new Date(ts);
+  if(!isNaN(d.getTime())) return d.toLocaleTimeString();
+  return String(ts).slice(0,19).replace('T',' ');
+}
+function renderAgents(data){
+  const s=data.summary||{};
+  const acts=s.total_actions??0, run=s.running??0, active=s.active_agents??0;
+  document.getElementById('ops-stat').innerHTML=
+    `<b>${acts}</b> autonomous actions across <b class="run">${active}</b> agents · ${run} running`;
+  const tl=data.timeline||[];
+  if(!tl.length){
+    feed.innerHTML='<div class="feed-empty">'+(data.error
+      ? '<span class="err">'+esc(data.error)+'</span>'
+      : 'no agent activity yet — all autopilots idle or offline')+'</div>';
+    return;
+  }
+  feed.innerHTML=tl.map(e=>`
+    <div class="row" style="--rc:${esc(e.color)}">
+      <span class="chip">${esc(e.app)}</span>
+      <span class="act">${esc(e.action)}</span>
+      <span class="rts">${esc(fmtTs(e.ts))}</span>
+    </div>`).join('');
+}
+async function tickAgents(){
+  try{
+    const r=await fetch('/api/agents',{cache:'no-store'});
+    renderAgents(await r.json());
+  }catch(e){/* keep last feed; fleet tick already surfaces connectivity */}
+}
+
+tick();
+tickAgents();
+setInterval(tick,5000);
+setInterval(tickAgents,5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FocusForge — exec-function OS for ADHD brains</title>
+<style>
+  :root{
+    --lime:#a3e635; --lime-soft:#c9f27a; --violet:#8b5cf6; --violet-soft:#b79dff;
+    --bg:#07080c; --bg2:#0d0f17; --panel:#12141f; --panel2:#171a28;
+    --ink:#f2f5ff; --mute:#8b90a8; --line:#232840; --danger:#ff5c7a;
+    --shadow:0 18px 60px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:radial-gradient(1200px 700px at 12% -10%, rgba(139,92,246,.18), transparent 60%),
+               radial-gradient(1000px 700px at 110% 10%, rgba(163,230,53,.12), transparent 55%),
+               var(--bg);
+    color:var(--ink); overflow-x:hidden; letter-spacing:.2px;
+  }
+  #fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:26px 22px 70px}
+
+  /* Header */
+  header{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .mark{
+    width:52px;height:52px;border-radius:15px;position:relative;flex:0 0 auto;
+    background:conic-gradient(from 210deg,var(--lime),var(--violet),var(--lime));
+    box-shadow:0 0 34px rgba(163,230,53,.4),inset 0 0 22px rgba(0,0,0,.4);
+    animation:spin 9s linear infinite;
+  }
+  .mark::after{content:"";position:absolute;inset:5px;border-radius:11px;background:var(--bg2)}
+  .mark::before{content:"⚡";position:absolute;inset:0;display:grid;place-items:center;font-size:23px;z-index:2;
+    filter:drop-shadow(0 0 8px var(--lime))}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .brand h1{margin:0;font-size:27px;font-weight:800;letter-spacing:.6px}
+  .brand h1 b{color:var(--lime)}
+  .brand h1 i{font-style:normal;color:var(--violet)}
+  .tag{font-size:12.5px;color:var(--mute);margin-top:3px;letter-spacing:.5px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:8px 13px;
+    border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--mute)}
+  .pill .dot{width:9px;height:9px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.7)}}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:1.35fr .95fr;gap:20px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:20px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .card h2{margin:0 0 4px;font-size:16px;letter-spacing:.4px;display:flex;align-items:center;gap:9px}
+  .card h2 .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;
+    background:rgba(163,230,53,.13);border:1px solid rgba(163,230,53,.3)}
+  .sub{color:var(--mute);font-size:12.5px;margin:0 0 15px}
+
+  /* Task list */
+  .adder{display:flex;gap:10px;margin-bottom:16px}
+  .adder input{flex:1;background:var(--bg2);border:1px solid var(--line);border-radius:12px;color:var(--ink);
+    padding:13px 14px;font-size:15px;outline:none}
+  .adder input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(139,92,246,.2)}
+  .adder select{background:var(--bg2);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:0 10px;font-size:13px}
+
+  .task{border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;background:var(--panel2);
+    transition:.25s;position:relative}
+  .task:hover{border-color:rgba(163,230,53,.4);transform:translateY(-2px)}
+  .task.done{opacity:.5}
+  .task.done .ttitle{text-decoration:line-through}
+  .trow{display:flex;align-items:center;gap:12px}
+  .ttitle{font-size:16.5px;font-weight:700;flex:1;line-height:1.25}
+  .wtag{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:4px 9px;border-radius:999px}
+  .w-heavy{background:rgba(255,92,122,.15);color:#ff9db0;border:1px solid rgba(255,92,122,.35)}
+  .w-medium{background:rgba(139,92,246,.16);color:var(--violet-soft);border:1px solid rgba(139,92,246,.35)}
+  .w-light{background:rgba(163,230,53,.15);color:var(--lime);border:1px solid rgba(163,230,53,.35)}
+
+  .btnrow{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-weight:800;letter-spacing:.3px;
+    transition:transform .08s ease, box-shadow .2s, filter .2s}
+  button:active{transform:translateY(2px) scale(.98)}
+  .btn{padding:11px 15px;font-size:13.5px}
+  .btn-lime{background:linear-gradient(180deg,var(--lime),#7fc624);color:#0b1400;
+    box-shadow:0 8px 22px rgba(163,230,53,.32),inset 0 1px 0 rgba(255,255,255,.4)}
+  .btn-lime:hover{filter:brightness(1.08)}
+  .btn-violet{background:linear-gradient(180deg,var(--violet),#6c3ce0);color:#fff;
+    box-shadow:0 8px 22px rgba(139,92,246,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+  .btn-ghost{background:rgba(255,255,255,.04);color:var(--ink);border:1px solid var(--line)}
+  .btn-ghost:hover{border-color:var(--lime);color:var(--lime)}
+
+  .starter{margin-top:13px;border-radius:14px;padding:14px;border:1px solid rgba(163,230,53,.4);
+    background:linear-gradient(180deg,rgba(163,230,53,.09),rgba(139,92,246,.06));
+    animation:pop .35s cubic-bezier(.2,1.3,.4,1)}
+  @keyframes pop{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
+  .starter .lab{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--lime);text-transform:uppercase}
+  .starter .step{font-size:17px;font-weight:700;line-height:1.35;margin:6px 0 8px}
+  .starter .why{font-size:12.5px;color:var(--mute);line-height:1.4}
+  .starter .src{font-size:10px;color:var(--mute);margin-top:8px;opacity:.7}
+
+  /* Focus / body-double session */
+  .session{display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center}
+  @media(max-width:520px){.session{grid-template-columns:1fr;justify-items:center;text-align:center}}
+  .ringwrap{position:relative;width:170px;height:170px}
+  .ringwrap svg{transform:rotate(-90deg)}
+  .time{position:absolute;inset:0;display:grid;place-items:center;flex-direction:column;text-align:center}
+  .time .big{font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;line-height:1}
+  .time .sm{font-size:10.5px;color:var(--mute);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+  .presence{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--lime-soft);margin-bottom:10px}
+  .avatars{display:flex}
+  .av{width:26px;height:26px;border-radius:50%;margin-left:-7px;border:2px solid var(--bg2);
+    background:conic-gradient(from 0deg,var(--violet),var(--lime));animation:bob 2.6s ease-in-out infinite}
+  .av:nth-child(2){animation-delay:.4s}.av:nth-child(3){animation-delay:.8s}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .barwrap{height:16px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);overflow:hidden;margin-top:12px}
+  .bar{height:100%;width:100%;border-radius:999px;
+    background:linear-gradient(90deg,var(--lime),var(--violet));transition:width 1s linear;
+    box-shadow:0 0 18px rgba(163,230,53,.5)}
+  .concrete{font-size:12px;color:var(--mute);margin-top:9px;line-height:1.4}
+  .dur{display:flex;gap:7px;margin:12px 0}
+  .dur button{padding:7px 12px;font-size:12px;border:1px solid var(--line);background:var(--bg2);color:var(--mute);border-radius:10px}
+  .dur button.on{border-color:var(--lime);color:var(--lime);background:rgba(163,230,53,.1)}
+
+  /* Insights */
+  .strat{margin-bottom:13px}
+  .strat .head{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:5px}
+  .strat .head b{font-weight:700}
+  .strat .head .num{color:var(--mute);font-variant-numeric:tabular-nums}
+  .meter{height:11px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);overflow:hidden}
+  .meter i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--violet),var(--lime));
+    transition:width .8s cubic-bezier(.2,1,.3,1)}
+  .crown{color:var(--lime);font-size:11px;font-weight:800;letter-spacing:.5px}
+  .topline{font-size:13px;color:var(--mute);margin-top:6px;line-height:1.5}
+  .topline b{color:var(--lime)}
+
+  /* Ambient */
+  .ambient{grid-column:1/-1;border:1px solid rgba(139,92,246,.4);
+    background:linear-gradient(120deg,rgba(139,92,246,.12),rgba(163,230,53,.06))}
+  .amb-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .year{font-size:11px;font-weight:800;letter-spacing:2px;color:var(--violet-soft);
+    border:1px solid rgba(139,92,246,.5);padding:5px 11px;border-radius:999px}
+  .nudge{margin-top:15px;border:1px dashed rgba(163,230,53,.5);border-radius:16px;padding:16px;display:none;
+    align-items:center;gap:14px;animation:slidein .5s ease}
+  .nudge.show{display:flex}
+  @keyframes slidein{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+  .nudge .glow{width:44px;height:44px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-size:22px;
+    background:rgba(163,230,53,.14);border:1px solid rgba(163,230,53,.4);animation:pulse 1.8s infinite}
+  .nudge .txt{flex:1;font-size:14.5px;line-height:1.4}
+  .nudge .txt b{color:var(--lime)}
+  .contexts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .ctx{font-size:11.5px;color:var(--mute);padding:6px 11px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(255,255,255,.03);display:flex;align-items:center;gap:6px}
+  .ctx .d{width:7px;height:7px;border-radius:50%;background:var(--violet);box-shadow:0 0 8px var(--violet)}
+
+  /* Momentum dashboard */
+  .momentum{grid-column:1/-1;border:1px solid rgba(163,230,53,.35);
+    background:linear-gradient(120deg,rgba(163,230,53,.07),rgba(139,92,246,.09))}
+  .mgrid{display:grid;grid-template-columns:1.2fr .7fr .7fr;gap:18px;margin-top:6px}
+  @media(max-width:820px){.mgrid{grid-template-columns:1fr}}
+  .mbox{border:1px solid var(--line);border-radius:16px;padding:16px;background:var(--panel2);
+    display:flex;flex-direction:column}
+  .mbox .lab{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--mute);text-transform:uppercase}
+  .chartwrap{position:relative}
+  #chart{width:100%;height:170px;display:block;margin-top:8px}
+  .chartmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:6px}
+  .chartmeta b{color:var(--lime)}
+
+  /* streak flame */
+  .flamebox{align-items:center;justify-content:center;text-align:center;
+    background:linear-gradient(180deg,rgba(255,120,40,.10),var(--panel2))}
+  .flame{font-size:52px;line-height:1;filter:drop-shadow(0 0 16px rgba(255,140,40,.6));
+    animation:flicker 1.4s ease-in-out infinite}
+  @keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.12) rotate(2deg)}}
+  .streaknum{font-size:46px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;margin-top:6px;
+    background:linear-gradient(180deg,var(--lime),var(--violet));-webkit-background-clip:text;
+    background-clip:text;-webkit-text-fill-color:transparent}
+  .streaklab{font-size:11.5px;color:var(--mute);letter-spacing:.5px;margin-top:4px}
+  .streaksub{font-size:11px;color:var(--mute);margin-top:8px}
+  .streaksub b{color:var(--lime)}
+
+  /* completion ring */
+  .ringbox{align-items:center;justify-content:center;text-align:center}
+  .cring{position:relative;width:120px;height:120px}
+  .cring svg{transform:rotate(-90deg)}
+  .cring .pct{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;font-weight:800;
+    font-variant-numeric:tabular-nums;color:var(--lime)}
+  .ringcap{font-size:11.5px;color:var(--mute);margin-top:10px;line-height:1.4}
+  .ringcap b{color:var(--ink)}
+
+  /* best window callout */
+  .window{grid-column:1/-1;margin-top:16px;border:1px dashed rgba(139,92,246,.5);border-radius:16px;
+    padding:15px 18px;display:flex;align-items:center;gap:14px;
+    background:linear-gradient(120deg,rgba(139,92,246,.10),rgba(163,230,53,.05))}
+  .window .wglow{width:46px;height:46px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-size:24px;
+    background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.4);animation:pulse 2s infinite}
+  .window .wtxt{flex:1;font-size:14.5px;line-height:1.45}
+  .window .wtxt b{color:var(--lime)}
+  .window .wbuckets{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
+  .window .wb{font-size:10.5px;color:var(--mute);padding:3px 9px;border-radius:999px;border:1px solid var(--line)}
+  .window .wb.on{border-color:var(--lime);color:var(--lime);background:rgba(163,230,53,.1)}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120px);z-index:20;
+    background:var(--panel2);border:1px solid var(--lime);color:var(--ink);padding:13px 20px;border-radius:14px;
+    font-weight:700;box-shadow:0 14px 40px rgba(0,0,0,.6);transition:transform .35s cubic-bezier(.2,1.3,.4,1)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .foot{margin-top:26px;text-align:center;color:var(--mute);font-size:12px;line-height:1.6}
+  .foot b{color:var(--lime)}
+  .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.25);border-top-color:var(--lime);
+    border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:-2px}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <h1><b>Focus</b><i>Forge</i></h1>
+        <div class="tag">Executive-function OS for ADHD brains · task-initiation · time-blindness · dopamine-aware</div>
+      </div>
+    </div>
+    <div class="pill"><span class="dot"></span><span id="aiMode">AI: connecting…</span></div>
+  </header>
+
+  <div class="grid">
+    <!-- MOMENTUM DASHBOARD -->
+    <div class="card momentum">
+      <div class="amb-head">
+        <h2><span class="ic">🔥</span> Momentum</h2>
+        <span class="year" id="mSummary" style="color:var(--lime);border-color:rgba(163,230,53,.5)">loading…</span>
+      </div>
+      <p class="sub">Your streaks &amp; focus history — the reason you keep coming back. Every finished session compounds.</p>
+      <div class="mgrid">
+        <div class="mbox">
+          <span class="lab">Focus minutes · last 14 days</span>
+          <div class="chartwrap"><canvas id="chart"></canvas></div>
+          <div class="chartmeta">
+            <span id="chartTotal"><b>0</b> min total</span>
+            <span id="chartBest"></span>
+          </div>
+        </div>
+        <div class="mbox flamebox">
+          <div class="flame">🔥</div>
+          <div class="streaknum" id="streakNum">0</div>
+          <div class="streaklab">day streak</div>
+          <div class="streaksub" id="streakSub">Finish a session today to keep it lit.</div>
+        </div>
+        <div class="mbox ringbox">
+          <span class="lab" style="margin-bottom:10px">Completion rate</span>
+          <div class="cring">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="50" stroke="#1c2136" stroke-width="11" fill="none"/>
+              <circle id="cringArc" cx="60" cy="60" r="50" stroke="url(#g2)" stroke-width="11" fill="none"
+                stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314"/>
+              <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#a3e635"/><stop offset="1" stop-color="#8b5cf6"/>
+              </linearGradient></defs>
+            </svg>
+            <div class="pct" id="cringPct">0%</div>
+          </div>
+          <div class="ringcap" id="ringCap"><b>0</b> of <b>0</b> sessions finished</div>
+        </div>
+      </div>
+      <div class="window">
+        <div class="wglow">🌅</div>
+        <div class="wtxt">
+          <span id="windowTxt">Log a few sessions and FocusForge will find your peak focus window.</span>
+          <div class="wbuckets" id="windowBuckets"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS + STARTER -->
+    <div class="card">
+      <h2><span class="ic">🧨</span> Beat the start-wall</h2>
+      <p class="sub">Can't start? Explode any task into a 2-minute starter step. Momentum, not completion.</p>
+      <div class="adder">
+        <input id="newTask" placeholder="Add something you've been avoiding…" />
+        <select id="newWeight">
+          <option value="light">light</option>
+          <option value="medium" selected>medium</option>
+          <option value="heavy">heavy</option>
+        </select>
+        <button class="btn btn-lime" onclick="addTask()">Add</button>
+      </div>
+      <div id="tasks"></div>
+    </div>
+
+    <!-- BODY DOUBLE SESSION -->
+    <div class="card">
+      <h2><span class="ic">👥</span> Body-double focus</h2>
+      <p class="sub">A quiet co-worker presence + time made <b>concrete</b> to fight time-blindness.</p>
+      <div class="dur">
+        <button class="on" data-min="2" onclick="setDur(2,this)">2m</button>
+        <button data-min="10" onclick="setDur(10,this)">10m</button>
+        <button data-min="25" onclick="setDur(25,this)">25m</button>
+      </div>
+      <div class="session">
+        <div class="ringwrap">
+          <svg width="170" height="170" viewBox="0 0 170 170">
+            <circle cx="85" cy="85" r="74" stroke="#1c2136" stroke-width="12" fill="none"/>
+            <circle id="ring" cx="85" cy="85" r="74" stroke="url(#g)" stroke-width="12" fill="none"
+              stroke-linecap="round" stroke-dasharray="465" stroke-dashoffset="0"/>
+            <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#a3e635"/><stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="time"><div><div class="big" id="clock">02:00</div><div class="sm">remaining</div></div></div>
+        </div>
+        <div style="width:100%">
+          <div class="presence">
+            <div class="avatars"><span class="av"></span><span class="av"></span><span class="av"></span></div>
+            <span id="presenceTxt">3 people forging alongside you</span>
+          </div>
+          <div class="barwrap"><div class="bar" id="bar"></div></div>
+          <div class="concrete" id="concrete">That's about the length of brushing your teeth. You can see it shrink.</div>
+          <div class="btnrow">
+            <button class="btn btn-violet" id="startBtn" onclick="toggleSession()">▶ Start session</button>
+            <button class="btn btn-ghost" onclick="finishSession()">✓ I did it</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="card">
+      <h2><span class="ic">📊</span> What works for <i>you</i></h2>
+      <p class="sub">FocusForge learns which start-strategies you actually finish — your private behavioral moat.</p>
+      <div id="insights"></div>
+      <div class="topline" id="topline"></div>
+    </div>
+
+    <!-- AMBIENT PREVIEW -->
+    <div class="card ambient">
+      <div class="amb-head">
+        <h2><span class="ic" style="background:rgba(139,92,246,.18);border-color:rgba(139,92,246,.45)">🛰️</span> Ambient mode</h2>
+        <span class="year">2036 · PREVIEW</span>
+      </div>
+      <p class="sub">An always-on exec-function agent watching context across every device — nudging you to start before avoidance sets in.</p>
+      <div class="contexts">
+        <span class="ctx"><span class="d"></span>Laptop · doc idle 40m</span>
+        <span class="ctx"><span class="d"></span>Calendar · deadline in 3h</span>
+        <span class="ctx"><span class="d"></span>Phone · 12 tab-switches</span>
+        <span class="ctx"><span class="d"></span>Watch · restless HRV</span>
+      </div>
+      <div class="btnrow" style="margin-top:14px">
+        <button class="btn btn-violet" onclick="simulateNudge()">Simulate a context nudge</button>
+      </div>
+      <div class="nudge" id="nudge">
+        <div class="glow">💡</div>
+        <div class="txt" id="nudgeTxt"></div>
+        <button class="btn btn-lime" onclick="acceptNudge()">2-min start</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>FocusForge</b> — built for the ADHD 5%, not the calm-app crowd.<br/>
+    Moat: a per-user dataset of what gets <b>this</b> brain to start &amp; finish · stdlib Python · port 8809
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------------- particle background ----------------
+const fx = document.getElementById('fx'), fctx = fx.getContext('2d');
+let W,H,parts=[];
+function resize(){W=fx.width=innerWidth;H=fx.height=innerHeight;}
+resize(); addEventListener('resize',resize);
+for(let i=0;i<60;i++)parts.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+  vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*2+.6,
+  c:Math.random()>.5?'163,230,53':'139,92,246'});
+function loopBg(){
+  fctx.clearRect(0,0,W,H);
+  for(const p of parts){p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+    fctx.beginPath();fctx.arc(p.x,p.y,p.r,0,7);fctx.fillStyle=`rgba(${p.c},.5)`;fctx.fill();}
+  for(let i=0;i<parts.length;i++)for(let j=i+1;j<parts.length;j++){
+    const a=parts[i],b=parts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+    if(d<120){fctx.strokeStyle=`rgba(139,92,246,${.12*(1-d/120)})`;fctx.lineWidth=.6;
+      fctx.beginPath();fctx.moveTo(a.x,a.y);fctx.lineTo(b.x,b.y);fctx.stroke();}}
+  requestAnimationFrame(loopBg);
+}
+loopBg();
+
+// ---------------- reward burst (dopamine) ----------------
+function burst(){
+  const layer=document.createElement('canvas');
+  layer.style.cssText='position:fixed;inset:0;z-index:50;pointer-events:none';
+  layer.width=innerWidth;layer.height=innerHeight;document.body.appendChild(layer);
+  const c=layer.getContext('2d');const cx=innerWidth/2,cy=innerHeight*.42;
+  const cols=['#a3e635','#8b5cf6','#c9f27a','#b79dff','#ffffff'];
+  let ps=[];for(let i=0;i<160;i++){const a=Math.random()*6.28,s=Math.random()*11+3;
+    ps.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s-4,g:.32,life:1,
+      col:cols[i%cols.length],sz:Math.random()*5+2,rot:Math.random()*6,vr:(Math.random()-.5)*.4});}
+  let t=0;(function anim(){t++;c.clearRect(0,0,layer.width,layer.height);let alive=false;
+    for(const p of ps){p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.vx*=.99;p.life-=.011;p.rot+=p.vr;
+      if(p.life>0){alive=true;c.save();c.translate(p.x,p.y);c.rotate(p.rot);c.globalAlpha=Math.max(0,p.life);
+        c.fillStyle=p.col;c.fillRect(-p.sz/2,-p.sz/2,p.sz,p.sz*1.6);c.restore();}}
+    if(alive&&t<220)requestAnimationFrame(anim);else layer.remove();})();
+}
+
+// ---------------- toast ----------------
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);}
+
+// ---------------- API ----------------
+async function api(path,method='GET',body){
+  const opt={method,headers:{'Content-Type':'application/json'}};
+  if(body)opt.body=JSON.stringify(body);
+  const r=await fetch(path,opt);return r.json();
+}
+
+// ---------------- tasks ----------------
+const wcls={heavy:'w-heavy',medium:'w-medium',light:'w-light'};
+async function loadTasks(){
+  const {tasks}=await api('/api/tasks');
+  const box=document.getElementById('tasks');box.innerHTML='';
+  for(const t of tasks){
+    const d=document.createElement('div');d.className='task'+(t.status==='done'?' done':'');
+    d.id='task-'+t.id;
+    d.innerHTML=`
+      <div class="trow">
+        <div class="ttitle">${esc(t.title)}</div>
+        <span class="wtag ${wcls[t.weight]||'w-medium'}">${t.weight}</span>
+      </div>
+      <div class="btnrow">
+        ${t.status==='done'?'<span class="crown">✓ DONE — logged as a win</span>':`
+        <button class="btn btn-lime" onclick="starter(${t.id})">⚡ 2-min starter</button>
+        <button class="btn btn-ghost" onclick="markDone(${t.id})">✓ Complete</button>`}
+      </div>
+      <div id="starter-${t.id}"></div>`;
+    box.appendChild(d);
+  }
+}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+async function starter(id){
+  const slot=document.getElementById('starter-'+id);
+  slot.innerHTML='<div class="starter"><span class="spinner"></span> Forging a 2-minute entry point…</div>';
+  const res=await api('/api/starter','POST',{id});
+  slot.innerHTML=`<div class="starter">
+    <div class="lab">Your 2-minute starter</div>
+    <div class="step">${esc(res.starter)}</div>
+    <div class="why">${esc(res.why||'')}</div>
+    <div class="src">${res.source==='claude'?'⚡ generated live by Claude (claude-sonnet-4-6)':'⚙ mock generator (no API key)'}</div>
+  </div>`;
+  await api('/api/log','POST',{strategy:'2-minute starter',task_title:'', outcome:'started'});
+  refreshInsights();
+}
+
+async function addTask(){
+  const inp=document.getElementById('newTask');const v=inp.value.trim();
+  if(!v)return;const w=document.getElementById('newWeight').value;
+  await api('/api/task','POST',{title:v,weight:w});inp.value='';loadTasks();toast('Task added — now shrink the start-wall');
+}
+async function markDone(id){
+  await api('/api/complete','POST',{id,strategy:'2-minute starter'});
+  burst();toast('🎉 Win logged. Dopamine delivered.');loadTasks();refreshInsights();
+}
+
+// ---------------- session timer ----------------
+let dur=120,left=120,timer=null,running=false;const RING=465;
+const concreteMap={2:"That's about the length of brushing your teeth. You can see it shrink.",
+ 10:"Roughly one song + a stretch. The bar shows exactly how much is left.",
+ 25:"One classic pomodoro. Watch the ring drain so time stops being invisible."};
+function setDur(m,btn){document.querySelectorAll('.dur button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');dur=m*60;left=dur;running=false;clearInterval(timer);
+  document.getElementById('startBtn').textContent='▶ Start session';
+  document.getElementById('concrete').textContent=concreteMap[m];render();}
+function fmt(s){const m=Math.floor(s/60),ss=s%60;return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;}
+function render(){
+  document.getElementById('clock').textContent=fmt(left);
+  const frac=left/dur;
+  document.getElementById('ring').style.strokeDashoffset=RING*(1-frac);
+  document.getElementById('bar').style.width=(frac*100)+'%';
+}
+function toggleSession(){
+  if(running){running=false;clearInterval(timer);document.getElementById('startBtn').textContent='▶ Resume';
+    document.getElementById('presenceTxt').textContent='paused — your co-workers are waiting';return;}
+  running=true;document.getElementById('startBtn').textContent='⏸ Pause';
+  document.getElementById('presenceTxt').textContent='3 people forging alongside you';
+  timer=setInterval(()=>{left--;render();
+    if(left<=0){clearInterval(timer);running=false;left=dur;render();
+      document.getElementById('startBtn').textContent='▶ Start session';finishSession(true);}
+  },1000);
+}
+async function finishSession(auto){
+  clearInterval(timer);running=false;document.getElementById('startBtn').textContent='▶ Start session';
+  burst();toast(auto?'⏱ Session complete — you stayed!':'🎉 Session win logged');
+  await api('/api/log','POST',{strategy:'body-double',task_title:'focus session',outcome:'finished'});
+  // persist the completed focus session to the history/streak layer
+  await api('/api/session','POST',{task:'body-double focus',minutes:Math.round(dur/60),finished:true});
+  left=dur;render();refreshInsights();refreshStats();
+}
+
+// ---------------- insights ----------------
+const stratIcon={'2-minute starter':'⚡','body-double':'👥','ambient nudge':'🛰️'};
+async function refreshInsights(){
+  const data=await api('/api/insights');
+  const box=document.getElementById('insights');box.innerHTML='';
+  const max=Math.max(1,...data.strategies.map(s=>s.finished));
+  data.strategies.forEach((s,i)=>{
+    const el=document.createElement('div');el.className='strat';
+    el.innerHTML=`<div class="head"><b>${stratIcon[s.strategy]||'•'} ${esc(s.strategy)}${i===0?' <span class=crown>★ TOP</span>':''}</b>
+      <span class="num">${s.finished} finished · ${s.finishRate}%</span></div>
+      <div class="meter"><i style="width:0%"></i></div>`;
+    box.appendChild(el);
+    requestAnimationFrame(()=>{el.querySelector('i').style.width=(s.finished/max*100)+'%';});
+  });
+  if(data.top)document.getElementById('topline').innerHTML=
+    `Pattern found: you finish most when you use <b>${esc(data.top)}</b>. FocusForge will surface it first next time you stall.`;
+}
+
+// ---------------- momentum dashboard ----------------
+function animateCount(el,to,suffix){
+  const from=0,dur=650,t0=performance.now();
+  (function step(t){const p=Math.min(1,(t-t0)/dur);const e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(to-from)*e)+(suffix||'');
+    if(p<1)requestAnimationFrame(step);})(t0);
+}
+function drawChart(days){
+  const cv=document.getElementById('chart');const dpr=window.devicePixelRatio||1;
+  const cssW=cv.clientWidth||520,cssH=170;
+  cv.width=cssW*dpr;cv.height=cssH*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);
+  const pad={l:6,r:6,t:14,b:20};const W=cssW-pad.l-pad.r,H=cssH-pad.t-pad.b;
+  const max=Math.max(1,...days.map(d=>d.minutes));
+  const n=days.length,gap=6,bw=(W-gap*(n-1))/n;
+  const t0=performance.now(),ANIM=700;
+  const todayIdx=n-1;
+  (function frame(t){
+    const prog=Math.min(1,(t-t0)/ANIM);const e=1-Math.pow(1-prog,3);
+    g.clearRect(0,0,cssW,cssH);
+    days.forEach((d,i)=>{
+      const full=(d.minutes/max)*H;const h=full*e;
+      const x=pad.l+i*(bw+gap),y=pad.t+H-h;
+      const grad=g.createLinearGradient(0,pad.t+H,0,pad.t);
+      if(i===todayIdx){grad.addColorStop(0,'#8b5cf6');grad.addColorStop(1,'#c9f27a');}
+      else{grad.addColorStop(0,'rgba(139,92,246,.55)');grad.addColorStop(1,'rgba(163,230,53,.9)');}
+      g.fillStyle=grad;
+      const r=Math.min(4,bw/2,h/2);
+      g.beginPath();
+      if(h>0.5){g.moveTo(x,y+h);g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);
+        g.lineTo(x+bw-r,y);g.quadraticCurveTo(x+bw,y,x+bw,y+r);g.lineTo(x+bw,y+h);g.closePath();g.fill();}
+      if(i===todayIdx){g.fillStyle='#a3e635';g.font='700 9px Space Grotesk,sans-serif';g.textAlign='center';
+        g.fillText('today',x+bw/2,cssH-6);}
+    });
+    if(prog<1)requestAnimationFrame(frame);
+  })(t0);
+}
+async function refreshStats(){
+  const s=await api('/api/stats');
+  // streak flame
+  animateCount(document.getElementById('streakNum'),s.currentStreak,'');
+  document.getElementById('streakSub').innerHTML= s.currentStreak>0
+    ? `Longest ever: <b>${s.longestStreak}</b> days. Don't break the chain.`
+    : `Longest ever: <b>${s.longestStreak}</b> days. One finished session relights it.`;
+  // header summary
+  document.getElementById('mSummary').textContent=
+    `${s.totalMinutes} min · ${s.totalSessions} sessions`;
+  // chart
+  window._lastStats=s.minutesByDay;
+  drawChart(s.minutesByDay);
+  document.getElementById('chartTotal').innerHTML=`<b>${s.totalMinutes}</b> min total`;
+  const peakDay=s.minutesByDay.reduce((a,b)=>b.minutes>a.minutes?b:a,{minutes:0});
+  document.getElementById('chartBest').innerHTML= peakDay.minutes>0
+    ? `peak day <b>${peakDay.minutes}m</b>`:'';
+  // completion ring
+  const arc=document.getElementById('cringArc');const C=314;
+  requestAnimationFrame(()=>{arc.style.transition='stroke-dashoffset 1s cubic-bezier(.2,1,.3,1)';
+    arc.style.strokeDashoffset=C*(1-s.completionRate/100);});
+  animateCount(document.getElementById('cringPct'),s.completionRate,'%');
+  document.getElementById('ringCap').innerHTML=
+    `<b>${s.finishedSessions}</b> of <b>${s.totalSessions}</b> sessions finished`;
+  // best window
+  const emoji={morning:'🌅',afternoon:'☀️',evening:'🌙'};
+  const wglow=document.querySelector('.window .wglow');
+  if(s.bestWindow){
+    wglow.textContent=emoji[s.bestWindow]||'⏰';
+    const b=s.buckets.find(x=>x.bucket===s.bestWindow)||{rate:0};
+    document.getElementById('windowTxt').innerHTML=
+      `Your best focus window is the <b>${s.bestWindow}</b> — you finish <b>${b.rate}%</b> of what you start then. Schedule the hard stuff here.`;
+  }
+  const wb=document.getElementById('windowBuckets');wb.innerHTML='';
+  s.buckets.forEach(b=>{const el=document.createElement('span');
+    el.className='wb'+(b.bucket===s.bestWindow?' on':'');
+    el.textContent=`${emoji[b.bucket]} ${b.bucket} ${b.rate}%`;wb.appendChild(el);});
+}
+
+// ---------------- ambient ----------------
+const nudges=[
+ 'You\'ve had the <b>proposal doc</b> open 40 min with no keystrokes. Want a <b>2-minute start</b>?',
+ 'Deadline in 3h and your body-double stat says you finish fastest with a co-worker. <b>Start a session?</b>',
+ '12 tab-switches in 6 minutes — classic avoidance loop. Let\'s shrink <b>one task</b> to 2 minutes.',
+];
+let ni=0;
+function simulateNudge(){document.getElementById('nudgeTxt').innerHTML=nudges[ni%nudges.length];ni++;
+  document.getElementById('nudge').classList.add('show');}
+async function acceptNudge(){
+  document.getElementById('nudge').classList.remove('show');
+  await api('/api/log','POST',{strategy:'ambient nudge',task_title:'ambient',outcome:'started'});
+  toast('🛰️ Ambient nudge accepted — start logged');burst();refreshInsights();
+}
+
+// ---------------- boot ----------------
+(async function(){
+  const h=await api('/api/health');
+  document.getElementById('aiMode').textContent = h.ai==='claude'
+    ? 'AI: Claude live (sonnet-4-6)' : 'AI: mock mode';
+  await loadTasks();await refreshInsights();await refreshStats();render();
+})();
+addEventListener('resize',()=>{ if(window._lastStats)drawChart(window._lastStats); });
+</script>
+</body>
+</html>

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>EmberHealth — flare-prediction OS</title>
+<style>
+  :root{
+    --rose:#fb7185; --plum:#a78bfa; --bg:#0d0a14; --bg2:#140f1e;
+    --glass:rgba(255,255,255,.045); --glass-brd:rgba(255,255,255,.09);
+    --ink:#f4eefb; --muted:#a89bbd; --calm:#5eead4; --elev:#fbbf24; --high:#fb7185;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    color:var(--ink); background:var(--bg); overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #aurora{position:fixed;inset:0;z-index:0;filter:blur(0.5px)}
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:26px 20px 70px}
+  header{display:flex;align-items:center;gap:16px;margin:8px 0 26px}
+  .logo{width:46px;height:46px;border-radius:14px;
+    background:radial-gradient(circle at 30% 30%,var(--rose),var(--plum));
+    box-shadow:0 0 30px rgba(251,113,133,.5),inset 0 0 14px rgba(255,255,255,.35);
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    animation:pulse 5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  h1{font-size:24px;margin:0;letter-spacing:.2px;font-weight:650}
+  h1 span{background:linear-gradient(90deg,var(--rose),var(--plum));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .badge{margin-left:auto;font-size:11px;color:var(--muted);
+    border:1px solid var(--glass-brd);padding:6px 11px;border-radius:999px;
+    background:var(--glass)}
+  .badge b{color:var(--plum)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--glass);border:1px solid var(--glass-brd);
+    border-radius:20px;padding:20px 20px 18px;backdrop-filter:blur(14px);
+    box-shadow:0 10px 40px rgba(0,0,0,.35);position:relative;overflow:hidden;
+    transition:transform .3s ease,box-shadow .3s ease}
+  .panel:hover{transform:translateY(-2px);box-shadow:0 16px 46px rgba(0,0,0,.42)}
+  .panel h2{font-size:14px;margin:0 0 14px;letter-spacing:.4px;
+    text-transform:uppercase;color:var(--muted);font-weight:600;
+    display:flex;align-items:center;gap:8px}
+  .panel h2 .dot{width:7px;height:7px;border-radius:50%;
+    background:linear-gradient(var(--rose),var(--plum));box-shadow:0 0 10px var(--rose)}
+  .span2{grid-column:1/-1}
+  label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px}
+  select,input[type=number],textarea{width:100%;background:rgba(0,0,0,.28);
+    border:1px solid var(--glass-brd);color:var(--ink);border-radius:12px;
+    padding:11px 12px;font-size:14px;font-family:inherit}
+  .sliderrow{display:flex;align-items:center;gap:12px;margin:10px 0}
+  .sliderrow label{margin:0;flex:0 0 74px}
+  input[type=range]{flex:1;accent-color:var(--rose);height:4px}
+  .sval{flex:0 0 30px;text-align:right;font-variant-numeric:tabular-nums;
+    color:var(--plum);font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chip{border:1px solid var(--glass-brd);background:rgba(255,255,255,.03);
+    color:var(--muted);padding:7px 12px;border-radius:999px;font-size:12.5px;
+    cursor:pointer;user-select:none;transition:all .18s ease}
+  .chip:hover{border-color:var(--plum)}
+  .chip.on{background:linear-gradient(90deg,rgba(251,113,133,.22),rgba(167,139,250,.22));
+    border-color:var(--rose);color:var(--ink);box-shadow:0 0 14px rgba(251,113,133,.25)}
+  .btn{margin-top:16px;width:100%;border:none;cursor:pointer;
+    background:linear-gradient(90deg,var(--rose),var(--plum));color:#1a0f1e;
+    font-weight:700;padding:13px;border-radius:13px;font-size:14px;
+    box-shadow:0 6px 22px rgba(251,113,133,.35);transition:transform .15s,filter .15s}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:transparent;border:1px solid var(--glass-brd);
+    color:var(--ink);box-shadow:none;font-weight:600}
+  /* gauge */
+  .gaugewrap{display:flex;align-items:center;gap:22px}
+  .gauge{position:relative;width:150px;height:150px;flex:0 0 150px}
+  .gnum{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center}
+  .gnum b{font-size:40px;font-weight:750;line-height:1}
+  .gnum small{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+  .band{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+    padding:4px 12px;border-radius:999px;display:inline-block;margin-top:8px}
+  .band.calm{background:rgba(94,234,212,.14);color:var(--calm)}
+  .band.elevated{background:rgba(251,191,36,.14);color:var(--elev)}
+  .band.high{background:rgba(251,113,133,.16);color:var(--high)}
+  .drivers{flex:1;min-width:0}
+  .drv{margin:9px 0}
+  .drv .dl{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+  .drv .dl b{color:var(--rose);font-variant-numeric:tabular-nums}
+  .drv .dbar{height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+  .drv .dbar i{display:block;height:100%;border-radius:4px;
+    background:linear-gradient(90deg,var(--plum),var(--rose))}
+  .drv .det{font-size:11px;color:var(--muted);margin-top:3px}
+  /* patterns */
+  .pat{display:flex;align-items:center;gap:12px;margin:11px 0}
+  .pat .pname{flex:0 0 120px;font-size:13px;text-transform:capitalize}
+  .pat .pbar{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
+  .pat .pbar i{display:block;height:100%;
+    background:linear-gradient(90deg,rgba(167,139,250,.9),rgba(251,113,133,.9))}
+  .pat .ppct{flex:0 0 42px;text-align:right;font-weight:700;color:var(--plum);
+    font-variant-numeric:tabular-nums}
+  .patnote{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .patnote b{color:var(--rose)}
+  canvas.chart{width:100%;height:220px;display:block;border-radius:14px;
+    background:rgba(0,0,0,.22)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .swatch{width:12px;height:4px;border-radius:2px;display:inline-block}
+  .aiout{white-space:pre-wrap;font-size:13.5px;line-height:1.62;color:var(--ink);
+    background:rgba(0,0,0,.22);border:1px solid var(--glass-brd);border-radius:14px;
+    padding:15px;margin-top:12px;min-height:60px}
+  .aiout.loading{color:var(--muted);font-style:italic}
+  .srcbadge{font-size:10.5px;color:var(--muted);margin-top:8px}
+  .srcbadge b{color:var(--calm)}
+  /* ambient */
+  .wearables{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 12px}
+  .metric{background:rgba(0,0,0,.24);border:1px solid var(--glass-brd);
+    border-radius:12px;padding:10px;text-align:center}
+  .metric b{display:block;font-size:19px;color:var(--plum);font-variant-numeric:tabular-nums}
+  .metric small{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .actlist{list-style:none;padding:0;margin:10px 0 0}
+  .actlist li{font-size:13px;padding:9px 12px;margin:8px 0;border-radius:11px;
+    background:linear-gradient(90deg,rgba(167,139,250,.1),rgba(251,113,133,.06));
+    border-left:2px solid var(--rose);color:var(--ink);line-height:1.45}
+  .fyr{font-size:11px;letter-spacing:2px;color:var(--plum);text-transform:uppercase;
+    border:1px solid rgba(167,139,250,.4);padding:3px 10px;border-radius:999px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(90deg,var(--rose),var(--plum));color:#1a0f1e;
+    padding:12px 20px;border-radius:12px;font-weight:600;font-size:13px;opacity:0;
+    transition:all .35s ease;z-index:20;box-shadow:0 8px 30px rgba(251,113,133,.4)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .disc{margin-top:34px;text-align:center;font-size:11.5px;color:var(--muted);
+    line-height:1.6;max-width:640px;margin-left:auto;margin-right:auto}
+  .disc b{color:var(--rose)}
+</style>
+</head>
+<body>
+<canvas id="aurora"></canvas>
+<div class="wrap">
+  <header>
+    <div class="logo">🌸</div>
+    <div>
+      <h1>Ember<span>Health</span></h1>
+      <div class="sub">A flare-prediction OS for the conditions mainstream apps ignore</div>
+    </div>
+    <div class="badge">AI engine: <b id="aimode">…</b></div>
+  </header>
+
+  <div class="grid">
+    <!-- LOG FORM -->
+    <div class="panel">
+      <h2><span class="dot"></span> Daily check-in</h2>
+      <label>Condition</label>
+      <select id="condition"></select>
+
+      <div class="sliderrow"><label>Pain</label>
+        <input type="range" id="pain" min="0" max="10" value="4"><span class="sval" id="pain_v">4</span></div>
+      <div class="sliderrow"><label>Fatigue</label>
+        <input type="range" id="fatigue" min="0" max="10" value="5"><span class="sval" id="fatigue_v">5</span></div>
+      <div class="sliderrow"><label>Sleep</label>
+        <input type="range" id="sleep" min="0" max="10" value="6"><span class="sval" id="sleep_v">6</span></div>
+      <div class="sliderrow"><label>Stress</label>
+        <input type="range" id="stress" min="0" max="10" value="4"><span class="sval" id="stress_v">4</span></div>
+
+      <label id="cyclelbl">Cycle day (optional)</label>
+      <input type="number" id="cycle_day" min="1" max="35" placeholder="e.g. 26"/>
+
+      <label>Today's triggers</label>
+      <div class="chips" id="chips"></div>
+
+      <button class="btn" id="logbtn">Log today &amp; re-forecast</button>
+    </div>
+
+    <!-- FLARE FORECAST -->
+    <div class="panel">
+      <h2><span class="dot"></span> Flare forecast · next 3 days</h2>
+      <div class="gaugewrap">
+        <div class="gauge">
+          <canvas id="gauge" width="300" height="300" style="width:150px;height:150px"></canvas>
+          <div class="gnum"><b id="risknum">–</b><small>RISK / 100</small></div>
+        </div>
+        <div class="drivers">
+          <span class="band" id="band">…</span>
+          <div id="drivers"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="panel span2">
+      <h2><span class="dot"></span> Symptom timeline · last 30 days</h2>
+      <canvas class="chart" id="timeline" width="2200" height="440"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--rose)"></i> Pain</span>
+        <span><i class="swatch" style="background:var(--plum)"></i> Fatigue</span>
+        <span><i class="swatch" style="background:var(--calm)"></i> Sleep</span>
+        <span><i class="swatch" style="background:#fbbf24;border-radius:50%;width:8px;height:8px"></i> Flare day (pain ≥ 6)</span>
+      </div>
+    </div>
+
+    <!-- PATTERN INTELLIGENCE -->
+    <div class="panel">
+      <h2><span class="dot"></span> Pattern intelligence</h2>
+      <div id="patterns"></div>
+      <div class="patnote" id="patnote"></div>
+    </div>
+
+    <!-- DOCTOR REPORT + INSIGHT -->
+    <div class="panel">
+      <h2><span class="dot"></span> Insight &amp; doctor-ready report</h2>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="insightbtn" style="margin-top:4px">Empathetic insight</button>
+        <button class="btn ghost" id="reportbtn" style="margin-top:4px">Doctor report</button>
+      </div>
+      <div class="aiout" id="aiout">Tap a button to generate a warm, plain-English read of your data — or a structured summary you can hand your doctor.</div>
+      <div class="srcbadge" id="srcbadge"></div>
+      <button class="btn" id="dlreportbtn" style="margin-top:12px">⤓ Download doctor report (print / Save-as-PDF)</button>
+    </div>
+
+    <!-- CORRELATIONS -->
+    <div class="panel span2">
+      <h2><span class="dot"></span> Correlations · trigger lift vs baseline</h2>
+      <div class="sub" style="margin:-6px 0 12px">How much each trigger raises your flare odds above your baseline flare rate (<b id="baserate">–</b> of days). Bars right of centre = amplifies risk.</div>
+      <canvas class="chart" id="corr" width="2200" height="460" style="height:auto;min-height:240px"></canvas>
+      <div class="patnote" id="corrnote"></div>
+      <div class="patnote" id="cyclenote" style="margin-top:8px"></div>
+    </div>
+
+    <!-- AMBIENT MODE 2036 -->
+    <div class="panel span2">
+      <h2><span class="dot"></span> Ambient mode <span class="fyr" style="margin-left:6px">2036 preview</span></h2>
+      <div class="sub" style="margin:-6px 0 12px">Where this is going: an ambient agent that reads your wearables, predicts a flare before you feel it, and quietly pre-arranges care.</div>
+      <div class="gaugewrap" style="align-items:flex-start">
+        <div style="flex:1">
+          <div class="wearables" id="wearables"></div>
+          <div style="font-size:13px;color:var(--muted)">Ambient flare risk:
+            <b id="ambrisk" style="color:var(--plum);font-size:16px">–</b> ·
+            projected lead time <b id="ambhrs" style="color:var(--rose)">–</b></div>
+          <ul class="actlist" id="actions"></ul>
+        </div>
+      </div>
+      <button class="btn ghost" id="ambbtn" style="max-width:280px">Simulate wearable stream</button>
+    </div>
+  </div>
+
+  <div class="disc">
+    <b>Not medical advice.</b> EmberHealth is a demo of personal pattern-tracking for
+    under-served chronic conditions. Predictions are illustrative, generated from mock data
+    and a transparent heuristic model. Always consult a qualified clinician.
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let CFG=null, STATE=null, COND="pcos";
+
+/* ---------- aurora background ---------- */
+(function(){
+  const c=$("#aurora"), x=c.getContext("2d"); let t=0;
+  function size(){c.width=innerWidth;c.height=innerHeight;}
+  size(); addEventListener("resize",size);
+  const blobs=[
+    {r:0.55,cx:.2,cy:.25,col:"251,113,133"},
+    {r:0.6,cx:.8,cy:.35,col:"167,139,250"},
+    {r:0.5,cx:.5,cy:.85,col:"94,234,212"},
+    {r:0.45,cx:.65,cy:.15,col:"251,113,133"},
+  ];
+  function draw(){
+    t+=0.0016; x.clearRect(0,0,c.width,c.height);
+    x.fillStyle="#0d0a14"; x.fillRect(0,0,c.width,c.height);
+    blobs.forEach((b,i)=>{
+      const px=(b.cx+Math.sin(t+i*1.7)*0.08)*c.width;
+      const py=(b.cy+Math.cos(t*0.9+i*2.1)*0.07)*c.height;
+      const rad=b.r*Math.min(c.width,c.height);
+      const g=x.createRadialGradient(px,py,0,px,py,rad);
+      g.addColorStop(0,`rgba(${b.col},0.30)`);
+      g.addColorStop(1,`rgba(${b.col},0)`);
+      x.fillStyle=g; x.beginPath(); x.arc(px,py,rad,0,7); x.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ---------- toast ---------- */
+function toast(msg){const e=$("#toast");e.textContent=msg;e.classList.add("show");
+  setTimeout(()=>e.classList.remove("show"),2200);}
+
+/* ---------- sliders ---------- */
+["pain","fatigue","sleep","stress"].forEach(k=>{
+  const el=$("#"+k); el.oninput=()=>$("#"+k+"_v").textContent=el.value;
+});
+
+/* ---------- init ---------- */
+async function boot(){
+  CFG=await (await fetch("/api/config")).json();
+  $("#aimode").textContent = CFG.ai==="claude" ? "Claude (live)" : "mock";
+  const sel=$("#condition");
+  Object.entries(CFG.conditions).forEach(([k,v])=>{
+    const o=document.createElement("option");o.value=k;o.textContent=v.label;sel.appendChild(o);
+  });
+  sel.value=COND; sel.onchange=()=>{COND=sel.value;renderChips();load();};
+  renderChips();
+  await load();
+}
+
+function renderChips(){
+  const box=$("#chips"); box.innerHTML="";
+  const cyc=CFG.conditions[COND].cycle_aware;
+  $("#cyclelbl").style.display=cyc?"block":"none";
+  $("#cycle_day").style.display=cyc?"block":"none";
+  CFG.conditions[COND].triggers.forEach(t=>{
+    const c=document.createElement("div");c.className="chip";c.dataset.t=t;
+    c.textContent=t.replace(/_/g," ");
+    c.onclick=()=>c.classList.toggle("on");
+    box.appendChild(c);
+  });
+}
+
+async function load(){
+  STATE=await (await fetch("/api/state?condition="+COND)).json();
+  render();
+  loadCorrelations();
+}
+
+let CORR=null;
+async function loadCorrelations(){
+  CORR=await (await fetch("/api/correlations?condition="+COND)).json();
+  renderCorrelations();
+}
+
+function render(){
+  const fc=STATE.forecast;
+  drawGauge(fc.risk, fc.band);
+  $("#risknum").textContent=fc.risk;
+  const band=$("#band"); band.textContent=fc.band; band.className="band "+fc.band;
+  // drivers
+  const dv=$("#drivers"); dv.innerHTML="";
+  const max=Math.max(1,...fc.drivers.map(d=>d.points));
+  fc.drivers.forEach(d=>{
+    const el=document.createElement("div");el.className="drv";
+    el.innerHTML=`<div class="dl"><span>${d.label}</span><b>+${d.points}</b></div>
+      <div class="dbar"><i style="width:${Math.round(d.points/max*100)}%"></i></div>
+      <div class="det">${d.detail}</div>`;
+    dv.appendChild(el);
+  });
+  if(!fc.drivers.length) dv.innerHTML='<div class="det">Log a day to see risk drivers.</div>';
+  renderPatterns();
+  drawTimeline(fc.trend);
+}
+
+function renderPatterns(){
+  const box=$("#patterns");box.innerHTML="";
+  const top=STATE.patterns.filter(p=>p.precede_pct>0).slice(0,5);
+  top.forEach(p=>{
+    const el=document.createElement("div");el.className="pat";
+    el.innerHTML=`<div class="pname">${p.trigger.replace(/_/g," ")}</div>
+      <div class="pbar"><i style="width:${p.precede_pct}%"></i></div>
+      <div class="ppct">${p.precede_pct}%</div>`;
+    box.appendChild(el);
+  });
+  if(top.length){
+    const t=top[0];
+    $("#patnote").innerHTML=`<b>${t.trigger.replace(/_/g," ")}</b> precedes
+      <b>${t.precede_pct}%</b> of your recorded flares — your strongest measured pattern.`;
+  }else{
+    box.innerHTML='<div class="patnote">Not enough flare days yet to find patterns.</div>';
+    $("#patnote").textContent="";
+  }
+}
+
+/* ---------- correlations ---------- */
+function renderCorrelations(){
+  if(!CORR)return;
+  $("#baserate").textContent = CORR.baseline_flare_pct+"%";
+  const items=(CORR.triggers||[]).filter(c=>c.n_with>0);
+  drawCorr(items);
+  if(items.length){
+    const t=items[0];
+    const dir = t.lift_pct>=0 ? "raises" : "lowers";
+    $("#corrnote").innerHTML=`<b>${t.trigger.replace(/_/g," ")}</b> ${dir} your flare odds by
+      <b>${t.lift_pct>=0?'+':''}${t.lift_pct}%</b> vs baseline —
+      flares on <b>${t.flare_rate_with}%</b> of days it appears vs
+      ${t.flare_rate_without}% when absent (${t.n_with} days observed).`;
+  }else{
+    $("#corrnote").innerHTML="Not enough logged triggers yet to compute lift.";
+  }
+  const cy=CORR.cycle;
+  if(cy){
+    $("#cyclenote").innerHTML=`🌙 <b>Cycle phase:</b> flares on <b>${cy.peri_flare_pct}%</b>
+      of peri-menstrual days vs <b>${cy.follicular_flare_pct}%</b> of follicular days —
+      a <b>${cy.lift_pct>=0?'+':''}${cy.lift_pct}%</b> peri-menstrual lift.`;
+  }else{
+    $("#cyclenote").textContent="";
+  }
+}
+
+function drawCorr(items){
+  const c=$("#corr");
+  const rowH=38, top=14, bot=14;
+  c.height = Math.max(240, top+bot+rowH*items.length);
+  const x=c.getContext("2d");
+  const W=c.width,H=c.height;
+  x.clearRect(0,0,W,H);
+  if(!items.length)return;
+  const labelW=300, padR=140;
+  const midX=labelW+(W-labelW-padR)*0.34;      // baseline (zero) line, offset for negatives
+  const maxAbs=Math.max(60,...items.map(i=>Math.abs(i.lift_pct)));
+  const scale=(W-padR-midX)/maxAbs;
+  const negScale=(midX-labelW)/maxAbs;
+  // zero line
+  x.strokeStyle="rgba(255,255,255,.18)";x.lineWidth=2;
+  x.beginPath();x.moveTo(midX,top-4);x.lineTo(midX,H-bot);x.stroke();
+  x.fillStyle="rgba(168,155,189,.7)";x.font="22px system-ui";x.textAlign="center";
+  x.fillText("baseline",midX,H-2);
+  items.forEach((it,i)=>{
+    const y=top+i*rowH, h=22, cy=y+h/2;
+    // label
+    x.fillStyle="#f4eefb";x.font="600 26px system-ui";x.textAlign="left";x.textBaseline="middle";
+    x.fillText(it.trigger.replace(/_/g," "),12,cy);
+    // bar
+    const v=it.lift_pct;
+    const w=Math.abs(v)*(v>=0?scale:negScale);
+    const bx=v>=0?midX:midX-w;
+    const g=x.createLinearGradient(bx,0,bx+w,0);
+    if(v>=0){g.addColorStop(0,"rgba(167,139,250,.85)");g.addColorStop(1,"rgba(251,113,133,.95)");}
+    else{g.addColorStop(0,"rgba(94,234,212,.85)");g.addColorStop(1,"rgba(94,234,212,.5)");}
+    x.fillStyle=g;roundRect(x,bx,y,Math.max(2,w),h,7);x.fill();
+    // value
+    x.fillStyle="#a78bfa";x.font="700 24px system-ui";x.textAlign="left";
+    x.fillText((v>=0?"+":"")+v+"%",Math.max(bx+w,midX)+10,cy);
+  });
+  x.textBaseline="alphabetic";
+}
+function roundRect(x,rx,ry,w,h,r){
+  r=Math.min(r,h/2,w/2);
+  x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);
+  x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath();
+}
+
+/* ---------- gauge ---------- */
+function drawGauge(risk,band){
+  const c=$("#gauge"),x=c.getContext("2d");x.clearRect(0,0,300,300);
+  const cx=150,cy=150,r=112,lw=22;
+  const col=band==="high"?"#fb7185":band==="elevated"?"#fbbf24":"#5eead4";
+  x.lineCap="round";
+  x.beginPath();x.arc(cx,cy,r,0.75*Math.PI,2.25*Math.PI);
+  x.strokeStyle="rgba(255,255,255,.07)";x.lineWidth=lw;x.stroke();
+  const end=0.75*Math.PI+(1.5*Math.PI)*(risk/100);
+  const g=x.createLinearGradient(0,0,300,300);
+  g.addColorStop(0,"#a78bfa");g.addColorStop(1,col);
+  x.beginPath();x.arc(cx,cy,r,0.75*Math.PI,end);
+  x.strokeStyle=g;x.lineWidth=lw;x.shadowColor=col;x.shadowBlur=18;x.stroke();
+  x.shadowBlur=0;
+}
+
+/* ---------- timeline chart ---------- */
+function drawTimeline(trend){
+  const c=$("#timeline"),x=c.getContext("2d");
+  const W=c.width,H=c.height,pad=34;
+  x.clearRect(0,0,W,H);
+  if(!trend||!trend.length)return;
+  const n=trend.length, iw=(W-pad*2)/(n-1||1);
+  const yy=v=>H-pad-(v/10)*(H-pad*2);
+  // gridlines
+  x.strokeStyle="rgba(255,255,255,.05)";x.lineWidth=1;
+  for(let g=0;g<=10;g+=2){const y=yy(g);x.beginPath();x.moveTo(pad,y);x.lineTo(W-pad,y);x.stroke();}
+  function line(key,color,w){
+    x.beginPath();x.lineWidth=w;x.strokeStyle=color;
+    trend.forEach((d,i)=>{const px=pad+i*iw,py=yy(d[key]);i?x.lineTo(px,py):x.moveTo(px,py);});
+    x.stroke();
+  }
+  // soft fill under pain
+  x.beginPath();x.moveTo(pad,H-pad);
+  trend.forEach((d,i)=>x.lineTo(pad+i*iw,yy(d.pain)));
+  x.lineTo(pad+(n-1)*iw,H-pad);x.closePath();
+  const fg=x.createLinearGradient(0,pad,0,H-pad);
+  fg.addColorStop(0,"rgba(251,113,133,.28)");fg.addColorStop(1,"rgba(251,113,133,0)");
+  x.fillStyle=fg;x.fill();
+  line("sleep","rgba(94,234,212,.7)",3);
+  line("fatigue","rgba(167,139,250,.85)",3);
+  line("pain","#fb7185",4);
+  // flare markers
+  trend.forEach((d,i)=>{if(d.flare){const px=pad+i*iw,py=yy(d.pain);
+    x.beginPath();x.arc(px,py,8,0,7);x.fillStyle="#fbbf24";
+    x.shadowColor="#fbbf24";x.shadowBlur=16;x.fill();x.shadowBlur=0;}});
+}
+
+/* ---------- log ---------- */
+$("#logbtn").onclick=async()=>{
+  const trig=[...document.querySelectorAll(".chip.on")].map(c=>c.dataset.t);
+  const body={condition:COND,
+    pain:+$("#pain").value,fatigue:+$("#fatigue").value,
+    sleep:+$("#sleep").value,stress:+$("#stress").value,
+    cycle_day:$("#cycle_day").value?+$("#cycle_day").value:null,
+    triggers:trig};
+  const r=await (await fetch("/api/log",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
+  STATE={condition:COND,forecast:r.forecast,patterns:r.patterns,count:r.count};
+  render();
+  toast("Logged today · forecast updated");
+};
+
+/* ---------- AI ---------- */
+async function ai(kind){
+  const out=$("#aiout");out.classList.add("loading");
+  out.textContent = CFG.ai==="claude" ? "Asking Claude…" : "Generating…";
+  $("#srcbadge").textContent="";
+  const r=await (await fetch("/api/"+kind,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({condition:COND})})).json();
+  out.classList.remove("loading");out.textContent=r.text;
+  $("#srcbadge").innerHTML = r.source==="claude"
+    ? 'Generated by <b>Claude (live)</b>'
+    : 'Generated by <b>mock engine</b> (no API key)';
+}
+$("#insightbtn").onclick=()=>ai("insight");
+$("#reportbtn").onclick=()=>ai("report");
+$("#dlreportbtn").onclick=()=>window.open("/report?condition="+COND,"_blank");
+
+/* ---------- ambient ---------- */
+$("#ambbtn").onclick=async()=>{
+  const r=await (await fetch("/api/ambient",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({condition:COND})})).json();
+  const w=r.wearable;
+  $("#wearables").innerHTML=`
+    <div class="metric"><b>${w.hrv_ms}</b><small>HRV ms</small></div>
+    <div class="metric"><b>${w.resting_hr}</b><small>Rest HR</small></div>
+    <div class="metric"><b>${w.sleep_efficiency_pct}%</b><small>Sleep eff</small></div>
+    <div class="metric"><b>${w.skin_temp_dev_c>0?'+':''}${w.skin_temp_dev_c}</b><small>Skin °C</small></div>`;
+  $("#ambrisk").textContent=r.ambient_risk;
+  $("#ambhrs").textContent="~"+r.lead_hours+"h";
+  $("#actions").innerHTML=r.actions.map(a=>`<li>${a}</li>`).join("");
+  toast("Ambient agent simulated");
+};
+
+boot();
+</script>
+</body>
+</html>

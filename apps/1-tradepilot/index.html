@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradePilot — Job-to-Cash Cockpit</title>
+<style>
+:root{
+  --amber:#f59e0b; --amber-dim:#b45309; --graphite:#1c1c22; --panel:#212129;
+  --panel2:#191920; --ink:#e8e6e1; --muted:#8b8b98; --line:rgba(245,158,11,.16);
+  --good:#34d399; --bad:#f87171; --blue:#60a5fa;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(245,158,11,.10), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(96,165,250,.06), transparent 55%),
+    var(--graphite);
+  color:var(--ink);
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+  font-size:14px; overflow-x:hidden;
+}
+/* scanline + grid overlay */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+  background-image:
+    linear-gradient(rgba(245,158,11,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(245,158,11,.035) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask:radial-gradient(circle at 50% 30%,#000,transparent 90%);
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 2px,transparent 2px 4px);
+  opacity:.25;
+}
+.app{position:relative;z-index:5;max-width:1360px;margin:0 auto;padding:20px 26px 80px}
+
+/* header */
+header{display:flex;align-items:center;gap:18px;padding:14px 0 22px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.logo{display:flex;align-items:center;gap:12px}
+.mark{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;
+  background:linear-gradient(150deg,var(--amber),var(--amber-dim));
+  box-shadow:0 0 22px rgba(245,158,11,.35),inset 0 0 12px rgba(0,0,0,.3);position:relative}
+.mark svg{width:26px;height:26px}
+h1{font-size:20px;margin:0;letter-spacing:.5px;font-weight:700}
+h1 span{color:var(--amber)}
+.tag{font-size:11px;color:var(--muted);letter-spacing:2.5px;text-transform:uppercase}
+.hdr-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.cap-pill{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border-radius:20px;
+  border:1px solid var(--line);display:flex;align-items:center;gap:7px;background:var(--panel2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--good);box-shadow:0 0 8px var(--good);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+canvas#sig{position:absolute;right:0;top:0;width:100%;height:100%;pointer-events:none;opacity:.7}
+
+/* metric strip */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.metric{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+.metric::after{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--amber);opacity:.7}
+.metric .k{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.metric .v{font-size:27px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.metric .s{font-size:11px;color:var(--muted);margin-top:3px}
+.metric .v.amber{color:var(--amber)}
+.metric .v.good{color:var(--good)}
+
+/* layout */
+.grid{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+.panel{background:linear-gradient(165deg,rgba(33,33,41,.9),rgba(25,25,32,.9));
+  border:1px solid var(--line);border-radius:16px;padding:18px 18px 20px;backdrop-filter:blur(6px);
+  box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.panel h2{font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);
+  margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.panel h2::before{content:"";width:6px;height:6px;background:var(--amber);border-radius:50%;box-shadow:0 0 8px var(--amber)}
+.col-left{display:flex;flex-direction:column;gap:20px}
+.col-right{display:flex;flex-direction:column;gap:20px}
+
+/* form */
+label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:12px 0 5px}
+input,textarea,select{width:100%;background:#141419;border:1px solid rgba(255,255,255,.08);color:var(--ink);
+  border-radius:9px;padding:10px 12px;font-family:inherit;font-size:13px;outline:none;transition:.15s}
+input:focus,textarea:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+textarea{resize:vertical;min-height:74px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.btn{background:linear-gradient(150deg,var(--amber),var(--amber-dim));color:#1a1205;border:none;
+  font-weight:700;letter-spacing:.5px;border-radius:9px;padding:11px 14px;cursor:pointer;font-size:13px;
+  transition:.15s;box-shadow:0 6px 18px rgba(245,158,11,.25)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(245,158,11,.4)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent;color:var(--amber);border:1px solid var(--line);box-shadow:none}
+.btn.mic{background:transparent;border:1px solid var(--line);color:var(--ink);flex:0 0 auto;width:46px;padding:0;display:grid;place-items:center}
+.btn.mic.rec{border-color:var(--bad);color:var(--bad);animation:pulse 1.2s infinite}
+.mic-row{display:flex;gap:8px;align-items:stretch}
+.mic-row textarea{flex:1}
+
+/* quote result */
+.quote{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:14px;background:#141419;display:none}
+.quote.show{display:block;animation:rise .4s ease}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.quote .src{font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:12px;text-transform:uppercase}
+.src.AI{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+.src.MOCK,.src.SEED{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid var(--line)}
+.li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:13px}
+.li .d{color:var(--ink)}.li.labor .d{color:var(--amber)}
+.li .a{font-variant-numeric:tabular-nums;color:var(--muted)}
+.qtotal{display:flex;justify-content:space-between;margin-top:10px;font-weight:700;font-size:16px}
+.qtotal .v{color:var(--amber)}
+.qsum{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;font-style:italic}
+
+/* pipeline */
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.lane{background:var(--panel2);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:10px;min-height:120px;transition:.15s}
+.lane.dragover{border-color:var(--amber);box-shadow:0 0 0 2px rgba(245,158,11,.2) inset}
+.lane .lh{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:9px;padding:0 2px}
+.lane .lh .c{color:var(--amber);font-weight:700}
+.card{background:linear-gradient(160deg,#232330,#1a1a22);border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;padding:10px;margin-bottom:9px;cursor:grab;transition:.15s;position:relative}
+.card:hover{border-color:var(--line);transform:translateY(-2px)}
+.card:active{cursor:grabbing}
+.card .t{font-size:12.5px;font-weight:600;line-height:1.35;margin-bottom:5px}
+.card .m{font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:9px;letter-spacing:.5px;padding:2px 6px;border-radius:8px;text-transform:uppercase}
+.b-Plumbing{background:rgba(96,165,250,.14);color:var(--blue)}
+.b-HVAC{background:rgba(52,211,153,.14);color:var(--good)}
+.b-Electrical{background:rgba(245,158,11,.14);color:var(--amber)}
+.card .price{color:var(--amber);font-weight:700;font-variant-numeric:tabular-nums}
+.card .adv{position:absolute;top:8px;right:8px;display:none;gap:4px}
+.card:hover .adv{display:flex}
+.card .adv button{width:20px;height:20px;border-radius:6px;border:1px solid var(--line);background:#141419;color:var(--amber);cursor:pointer;font-size:11px;line-height:1;padding:0}
+.card .cust-ok{color:var(--good);font-size:9.5px;font-weight:600;white-space:nowrap}
+.card .dep{margin-top:6px;font-size:10px;color:var(--amber);letter-spacing:.3px}
+.card .share-btn{margin-top:8px;width:100%;background:transparent;border:1px solid var(--line);color:var(--amber);
+  border-radius:8px;padding:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.card .share-btn:hover{background:rgba(245,158,11,.1)}
+.card .share-link{display:none;margin-top:6px;font-size:10px;word-break:break-all}
+.card .share-link.show{display:block}
+.card .share-link a{color:var(--blue);text-decoration:none}
+
+/* intel */
+.intel-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.intel-row .jt{width:90px;font-size:12px;font-weight:600}
+.bar-wrap{flex:1;height:8px;background:#141419;border-radius:6px;overflow:hidden}
+.bar{height:100%;background:linear-gradient(90deg,var(--amber-dim),var(--amber));border-radius:6px;transition:width .8s ease}
+.intel-row .val{font-size:12px;color:var(--amber);font-weight:700;width:78px;text-align:right;font-variant-numeric:tabular-nums}
+.intel-row .n{font-size:10px;color:var(--muted);width:60px;text-align:right}
+.moat{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5;border-left:2px solid var(--amber);padding-left:10px}
+
+/* ambient */
+.ambient{border:1px solid rgba(96,165,250,.25);background:linear-gradient(160deg,rgba(96,165,250,.06),rgba(25,25,32,.9))}
+.ambient h2{color:var(--blue)}.ambient h2::before{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.future-badge{font-size:9px;letter-spacing:1.5px;background:rgba(96,165,250,.15);color:var(--blue);
+  padding:3px 9px;border-radius:12px;border:1px solid rgba(96,165,250,.3);margin-left:auto;text-transform:uppercase}
+.chat{margin-top:12px;display:flex;flex-direction:column;gap:9px;max-height:280px;overflow-y:auto;padding-right:4px}
+.bubble{padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.45;max-width:85%;opacity:0;animation:pop .35s forwards}
+@keyframes pop{to{opacity:1}}
+.bubble.customer{align-self:flex-end;background:#2a2a34;border:1px solid rgba(255,255,255,.08);border-bottom-right-radius:3px}
+.bubble.agent{align-self:flex-start;background:rgba(96,165,250,.14);border:1px solid rgba(96,165,250,.25);border-bottom-left-radius:3px}
+.bubble.system{align-self:center;background:transparent;border:1px dashed rgba(245,158,11,.3);color:var(--amber);font-size:11px;font-style:italic;max-width:100%;text-align:center}
+.bubble .who{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+
+/* autopilot */
+.autopilot h2{justify-content:flex-start}
+.switch{margin-left:auto;position:relative;display:inline-block;width:42px;height:22px;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#141419;border:1px solid var(--line);border-radius:22px;transition:.2s}
+.slider::before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;border-radius:50%;
+  background:var(--muted);transition:.2s}
+.switch input:checked+.slider{background:linear-gradient(150deg,var(--amber),var(--amber-dim));border-color:transparent}
+.switch input:checked+.slider::before{transform:translateX(20px);background:#1a1205}
+.ap-stat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:6px 0 4px}
+.ap-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.ap-dot.on{background:var(--good);box-shadow:0 0 8px var(--good);animation:pulse 1.6s infinite}
+.ap-counts{margin-left:auto;color:var(--amber);font-weight:700;font-variant-numeric:tabular-nums}
+.ap-feed{margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding-right:4px}
+.ap-item{border:1px solid rgba(255,255,255,.06);border-left:2px solid var(--amber);background:#141419;
+  border-radius:10px;padding:9px 11px;font-size:12px;opacity:0;animation:pop .35s forwards}
+.ap-item .in{color:var(--ink);line-height:1.4}
+.ap-item .meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px}
+.ap-item .meta .badge{flex:0 0 auto}
+.ap-item .qt{color:var(--amber);font-weight:700;font-variant-numeric:tabular-nums}
+.ap-item .sent{color:var(--good);font-size:11px;margin-top:5px;display:flex;align-items:center;gap:6px}
+.ap-item .sent a{color:var(--blue);text-decoration:none}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--amber);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--amber);
+  color:var(--ink);padding:12px 20px;border-radius:10px;z-index:100;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(245,158,11,.25);border-radius:8px}
+.muted{color:var(--muted)}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.board{grid-template-columns:1fr}}
+@media(min-width:1001px) and (max-width:1200px){.metrics{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="mark">
+        <canvas id="sig"></canvas>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1a1205" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12l4 4 8-9"/><path d="M14 4l7 7-4 4"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Trade<span>Pilot</span></h1>
+        <div class="tag">Job → Quote → Cash · Cockpit</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="cap-pill"><span class="dot" id="capAI"></span>Claude Quote AI</div>
+      <div class="cap-pill"><span class="dot" id="capTTS"></span>Voice</div>
+    </div>
+  </header>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="grid">
+    <div class="col-left">
+      <!-- INTAKE -->
+      <div class="panel">
+        <h2>New Job Intake</h2>
+        <label>Customer</label>
+        <input id="fCust" placeholder="e.g. Marcy Alvarez" value="Walk-in customer">
+        <label>Job title</label>
+        <input id="fTitle" placeholder="e.g. No hot water in master bath">
+        <label>Photo URL (optional)</label>
+        <input id="fPhoto" placeholder="https://...">
+        <label>Voice note (speak or type)</label>
+        <div class="mic-row">
+          <textarea id="fNote" placeholder="Tap the mic and describe the problem..."></textarea>
+          <button class="btn mic" id="micBtn" title="Dictate">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10a7 7 0 0 1-14 0"/><path d="M12 17v4"/></svg>
+          </button>
+        </div>
+        <button class="btn" id="quoteBtn" style="width:100%;margin-top:16px">⚡ Draft AI Quote</button>
+        <div class="quote" id="quoteOut"></div>
+      </div>
+
+      <!-- AUTOPILOT -->
+      <div class="panel autopilot">
+        <h2>Autopilot
+          <label class="switch" title="Handle inbound leads hands-free">
+            <input type="checkbox" id="apToggle"><span class="slider"></span>
+          </label>
+        </h2>
+        <p class="muted" style="font-size:12px;margin:0 0 6px;line-height:1.5">
+          Reads the inbound lead queue, classifies each job, drafts an itemized quote
+          from your corpus, and publishes a shareable link — no taps.</p>
+        <div class="ap-stat">
+          <span class="ap-dot" id="apDot"></span>
+          <span id="apStatus">Autopilot off</span>
+          <span class="ap-counts" id="apCounts"></span>
+        </div>
+        <div class="ap-feed" id="apFeed"></div>
+      </div>
+
+      <!-- PRICING INTELLIGENCE -->
+      <div class="panel">
+        <h2>Pricing Intelligence</h2>
+        <div id="intel"></div>
+        <div class="moat">Every quote feeds the corpus. Avg ticket per trade sharpens with volume — the pricing edge compounds and travels with you.</div>
+      </div>
+    </div>
+
+    <div class="col-right">
+      <!-- PIPELINE -->
+      <div class="panel">
+        <h2>Pipeline · Job-to-Cash</h2>
+        <div class="board" id="board"></div>
+      </div>
+
+      <!-- AMBIENT -->
+      <div class="panel ambient">
+        <h2>Ambient Mode <span class="future-badge">2036 Preview</span></h2>
+        <p class="muted" style="font-size:12px;margin:0 0 4px;line-height:1.5">
+          The agent answers inbound texts &amp; calls, prices from your corpus, and books the job — hands-free.</p>
+        <div class="mic-row" style="margin-top:10px">
+          <input id="ambIn" placeholder="Simulate an inbound customer text..." value="Hey my AC is blowing warm air and it's 90 inside, can someone come out?">
+          <button class="btn" id="ambBtn" style="flex:0 0 auto">Simulate</button>
+        </div>
+        <div class="chat" id="chat"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), fmt=n=>'$'+(Number(n||0)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+let CAP={ai:false,tts:false};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+async function api(path,body){
+  const opt=body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{};
+  const r=await fetch(path,opt); return r.json();
+}
+
+function renderMetrics(t){
+  const dep=t.deposits||0, drate=((t.deposit_rate||0)*100).toFixed(0);
+  $('#metrics').innerHTML=`
+    <div class="metric"><div class="k">Collected</div><div class="v good">${fmt(t.collected)}</div><div class="s">paid invoices</div></div>
+    <div class="metric"><div class="k">Deposits Held</div><div class="v amber">${fmt(dep)}</div><div class="s">${drate}% on approval</div></div>
+    <div class="metric"><div class="k">Outstanding</div><div class="v amber">${fmt(t.outstanding)}</div><div class="s">awaiting payment</div></div>
+    <div class="metric"><div class="k">Platform Fees</div><div class="v">${fmt(t.fees)}</div><div class="s">${(t.fee_rate*100).toFixed(1)}% of collected</div></div>
+    <div class="metric"><div class="k">Net to You</div><div class="v amber">${fmt(t.collected-t.fees)}</div><div class="s">after platform fee</div></div>`;
+}
+
+function renderIntel(intel){
+  const types=Object.keys(intel); if(!types.length){$('#intel').innerHTML='<div class="muted" style="font-size:12px">No data yet.</div>';return;}
+  const max=Math.max(...types.map(k=>intel[k].avg_total),1);
+  $('#intel').innerHTML=types.map(k=>{
+    const d=intel[k],w=Math.round(d.avg_total/max*100);
+    return `<div class="intel-row"><div class="jt">${k}</div>
+      <div class="bar-wrap"><div class="bar" style="width:${w}%"></div></div>
+      <div class="val">${fmt(d.avg_total)}</div><div class="n">${d.samples} jobs</div></div>`;
+  }).join('');
+}
+
+function jobPrice(j){return j.quote?j.quote.total:(j.invoice?j.invoice.amount:0);}
+
+function shareQuote(id,card){
+  const url=location.origin+'/q/'+id;
+  const box=card.querySelector('.share-link');
+  box.innerHTML=`<a href="${url}" target="_blank">${url}</a>`;
+  box.classList.add('show');
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(
+    ()=>toast('Quote link copied'),()=>toast('Quote link ready'));}
+  else toast('Quote link ready');
+}
+
+function renderBoard(state){
+  const board=$('#board');board.innerHTML='';
+  state.stages.forEach(stage=>{
+    const jobs=state.jobs.filter(j=>j.stage===stage);
+    const lane=document.createElement('div');lane.className='lane';lane.dataset.stage=stage;
+    lane.innerHTML=`<div class="lh"><span>${stage}</span><span class="c">${jobs.length}</span></div>`;
+    jobs.forEach(j=>{
+      const c=document.createElement('div');c.className='card';c.draggable=true;c.dataset.id=j.id;
+      const price=jobPrice(j);
+      const canShare=!!j.quote;
+      const approved=!!j.approved_at;
+      let statusTag='';
+      if(j.invoice&&j.invoice.paid) statusTag='<span style="color:var(--good)">✓ paid</span>';
+      else if(approved) statusTag='<span class="cust-ok">✓ approved by customer</span>';
+      c.innerHTML=`<div class="adv"><button data-dir="-1" title="Back">‹</button><button data-dir="1" title="Advance">›</button></div>
+        <div class="t">${j.title}</div>
+        <div class="m"><span class="badge b-${j.job_type}">${j.job_type}</span>${price?`<span class="price">${fmt(price)}</span>`:'<span class="muted">—</span>'}</div>
+        <div class="m" style="margin-top:6px"><span>${j.cust_name}</span>${statusTag}</div>
+        ${j.deposit_amount?`<div class="dep">Deposit ${fmt(j.deposit_amount)} collected</div>`:''}
+        ${canShare?`<button class="share-btn" data-id="${j.id}">🔗 Share quote</button><div class="share-link" data-id="${j.id}"></div>`:''}`;
+      c.addEventListener('dragstart',e=>{e.dataTransfer.setData('id',j.id);c.style.opacity=.4;});
+      c.addEventListener('dragend',()=>c.style.opacity=1);
+      c.querySelectorAll('.adv button').forEach(b=>b.addEventListener('click',async e=>{
+        e.stopPropagation();await api('/api/advance',{job_id:j.id,direction:+b.dataset.dir});load();}));
+      const sb=c.querySelector('.share-btn');
+      if(sb) sb.addEventListener('click',e=>{e.stopPropagation();shareQuote(j.id,c);});
+      lane.appendChild(c);
+    });
+    lane.addEventListener('dragover',e=>{e.preventDefault();lane.classList.add('dragover');});
+    lane.addEventListener('dragleave',()=>lane.classList.remove('dragover'));
+    lane.addEventListener('drop',async e=>{e.preventDefault();lane.classList.remove('dragover');
+      const id=e.dataTransfer.getData('id');await api('/api/set_stage',{job_id:+id,stage:stage});load();});
+    board.appendChild(lane);
+  });
+}
+
+async function load(){
+  const s=await api('/api/state');
+  CAP=s.capabilities;
+  $('#capAI').className='dot'+(CAP.ai?' on':'');
+  $('#capTTS').className='dot'+(CAP.tts?' on':'');
+  renderMetrics(s.totals);renderIntel(s.intel);renderBoard(s);
+}
+
+// seed the autopilot counts on first paint (without starting it)
+apRefreshState().then(st=>{ if(!apTimer) apSetStatus(st.queue_remaining?'Autopilot off':'Queue empty — standing by',false); });
+
+// ---- quote ----
+$('#quoteBtn').addEventListener('click',async()=>{
+  const title=$('#fTitle').value.trim();
+  if(!title){toast('Add a job title first');return;}
+  const btn=$('#quoteBtn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Drafting'+(CAP.ai?' with Claude':'')+'...';
+  const q=await api('/api/quote',{
+    customer:$('#fCust').value.trim(),title,photo_url:$('#fPhoto').value.trim(),voice_note:$('#fNote').value.trim()});
+  btn.disabled=false;btn.innerHTML='⚡ Draft AI Quote';
+  const items=(q.line_items||[]).map(li=>`<div class="li ${li.kind}"><span class="d">${li.desc}</span><span class="a">${fmt(li.amount)}</span></div>`).join('');
+  const out=$('#quoteOut');
+  out.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-weight:700">${q.job_type} Quote</span><span class="src ${q.source}">${q.source==='AI'?'Claude AI':'Corpus'}</span></div>
+    ${items}
+    <div class="qtotal"><span>Total</span><span class="v">${fmt(q.total)}</span></div>
+    <div class="qsum">${q.summary||''}</div>
+    <button class="btn ghost" id="narrateBtn" style="width:100%;margin-top:12px">🔊 Narrate quote</button>`;
+  out.classList.add('show');
+  $('#narrateBtn').addEventListener('click',()=>narrate(`${q.job_type} quote. Total ${Math.round(q.total)} dollars. ${q.summary||''}`));
+  $('#fTitle').value='';$('#fNote').value='';$('#fPhoto').value='';
+  toast('Quote saved → pipeline');load();
+});
+
+// ---- narration (ElevenLabs or speechSynthesis) ----
+async function narrate(text){
+  if(CAP.tts){
+    try{
+      const r=await fetch('/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      const ct=r.headers.get('Content-Type')||'';
+      if(ct.includes('audio')){const b=await r.blob();new Audio(URL.createObjectURL(b)).play();return;}
+    }catch(e){}
+  }
+  if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(text);u.rate=1.02;speechSynthesis.speak(u);}
+  else toast('No voice available');
+}
+
+// ---- dictation (Web Speech API) ----
+let rec=null;
+$('#micBtn').addEventListener('click',()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Dictation not supported here — type instead');return;}
+  const btn=$('#micBtn');
+  if(rec){rec.stop();return;}
+  rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
+  let base=$('#fNote').value;
+  btn.classList.add('rec');
+  rec.onresult=e=>{let s='';for(let i=e.resultIndex;i<e.results.length;i++)s+=e.results[i][0].transcript;
+    $('#fNote').value=(base+' '+s).trim();};
+  rec.onend=()=>{btn.classList.remove('rec');rec=null;};
+  rec.onerror=()=>{btn.classList.remove('rec');rec=null;};
+  rec.start();
+});
+
+// ---- ambient ----
+$('#ambBtn').addEventListener('click',async()=>{
+  const btn=$('#ambBtn');btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
+  const r=await api('/api/ambient',{text:$('#ambIn').value.trim()});
+  btn.disabled=false;btn.textContent='Simulate';
+  const chat=$('#chat');chat.innerHTML='';
+  r.steps.forEach((st,i)=>{setTimeout(()=>{
+    const b=document.createElement('div');b.className='bubble '+st.actor;
+    const who=st.actor==='customer'?'Customer':st.actor==='agent'?'TradePilot Agent':'System';
+    b.innerHTML=(st.actor!=='system'?`<div class="who">${who}</div>`:'')+st.text;
+    chat.appendChild(b);chat.scrollTop=chat.scrollHeight;
+  },i*650);});
+});
+
+// ---- autopilot ----
+let apTimer=null, apBusy=false;
+function apSetStatus(txt,on){$('#apStatus').textContent=txt;$('#apDot').className='ap-dot'+(on?' on':'');}
+async function apRefreshState(){
+  const s=await api('/api/autopilot/state');
+  $('#apCounts').textContent=`${s.handled_count} handled · ${s.queue_remaining} queued`;
+  return s;
+}
+function apFeedItem(r){
+  const feed=$('#apFeed');
+  const el=document.createElement('div');el.className='ap-item';
+  el.innerHTML=`<div class="in">📨 ${r.inbound}</div>
+    <div class="meta"><span class="badge b-${r.job_type}">${r.job_type}</span>
+      <span>Drafted quote <span class="qt">${fmt(r.quote_total)}</span></span></div>
+    <div class="sent">✓ Quote sent — <a href="${r.quote_link}" target="_blank">link ready ↗</a>
+      <span class="src ${r.source}" style="margin-left:auto">${r.source==='AI'?'Claude AI':'Corpus'}</span></div>`;
+  feed.insertBefore(el,feed.firstChild);
+}
+async function apStep(){
+  if(apBusy) return;
+  apBusy=true;
+  try{
+    const r=await api('/api/autopilot/step',{});
+    if(r.idle){
+      apSetStatus('Queue empty — standing by',true);
+      await apRefreshState();
+      return;
+    }
+    if(r.ok){
+      apFeedItem(r);
+      const s=r.state||await apRefreshState();
+      $('#apCounts').textContent=`${s.handled_count} handled · ${s.queue_remaining} queued`;
+      apSetStatus('Working the inbound queue…',true);
+      load(); // pipeline board updates live as new jobs appear
+    }
+  }catch(e){/* keep running */}
+  finally{apBusy=false;}
+}
+$('#apToggle').addEventListener('change',async e=>{
+  if(e.target.checked){
+    apSetStatus('Working the inbound queue…',true);
+    await apStep();
+    apTimer=setInterval(apStep,4000);
+  }else{
+    if(apTimer)clearInterval(apTimer);apTimer=null;
+    apSetStatus('Autopilot off',false);
+  }
+});
+
+// ---- signal canvas flourish on the logo mark ----
+(function(){
+  const cv=$('#sig'),ctx=cv.getContext('2d');
+  function size(){cv.width=cv.offsetWidth*2;cv.height=cv.offsetHeight*2;}
+  size();let t=0;
+  (function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.strokeStyle='rgba(26,18,5,.35)';ctx.lineWidth=2;
+    const w=cv.width,h=cv.height,mid=h/2;ctx.beginPath();
+    for(let x=0;x<w;x++){const y=mid+Math.sin((x/w*6)+t)*Math.sin(t*.6)*(h*.18);x?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.stroke();t+=.06;requestAnimationFrame(draw);
+  })();
+  window.addEventListener('resize',size);
+})();
+
+load();
+</script>
+</body>
+</html>

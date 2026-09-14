@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CompliAgent — Compliance Radar</title>
+<style>
+:root{
+  --indigo:#6366f1; --indigo-b:#818cf8; --steel:#94a3b8; --steel-d:#64748b;
+  --bg:#070a12; --bg2:#0b1120; --panel:rgba(19,26,44,.62); --panel-b:rgba(148,163,184,.14);
+  --ink:#e6ebf5; --ink-dim:#9aa6bd; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --dp:#6366f1; --sec:#22d3ee; --aml:#f472b6; --emp:#a78bfa; --tax:#fbbf24; --sector:#34d399;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(1200px 700px at 78% -8%,rgba(99,102,241,.16),transparent 60%),
+             radial-gradient(900px 600px at -5% 110%,rgba(34,211,238,.08),transparent 55%),var(--bg);
+  color:var(--ink);font:14px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  letter-spacing:.1px;
+}
+a{color:var(--indigo-b)}
+.wrap{max-width:1440px;margin:0 auto;padding:22px 26px 60px}
+header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.logo{width:42px;height:42px;border-radius:11px;position:relative;
+  background:conic-gradient(from 210deg,var(--indigo),#22d3ee,var(--indigo));
+  box-shadow:0 0 28px rgba(99,102,241,.5);flex:0 0 auto}
+.logo::after{content:"";position:absolute;inset:6px;border-radius:7px;background:var(--bg2)}
+.logo::before{content:"";position:absolute;left:50%;top:50%;width:2px;height:14px;
+  background:linear-gradient(var(--indigo-b),transparent);transform-origin:bottom;z-index:2;
+  animation:spin 3.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.4px}
+.sub{color:var(--steel);font-size:12px;margin-top:1px}
+.badge{margin-left:auto;display:flex;gap:10px;align-items:center}
+.pill{border:1px solid var(--panel-b);background:var(--panel);border-radius:999px;
+  padding:6px 13px;font-size:11.5px;color:var(--ink-dim);backdrop-filter:blur(8px)}
+.pill b{color:var(--ink)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.live{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.mock{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--panel-b);border-radius:16px;
+  padding:16px 18px;backdrop-filter:blur(11px);position:relative;overflow:hidden}
+.panel h2{font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--steel);
+  margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.panel h2 .n{margin-left:auto;color:var(--ink-dim);font-size:11px;letter-spacing:.5px}
+
+/* radar */
+.radarwrap{display:flex;gap:18px}
+.radarbox{flex:0 0 auto}
+#radar{display:block;border-radius:14px;background:
+  radial-gradient(circle at 50% 50%,rgba(99,102,241,.08),transparent 70%),#060911;
+  border:1px solid rgba(99,102,241,.18)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:11px;color:var(--ink-dim)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.detail{flex:1;min-width:0;display:flex;flex-direction:column}
+.detail .empty{color:var(--steel-d);font-size:12.5px;margin-top:6px;line-height:1.7}
+.rtitle{font-size:15px;font-weight:600;line-height:1.35;margin:2px 0 8px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tag{font-size:10.5px;padding:3px 9px;border-radius:6px;border:1px solid var(--panel-b);
+  background:rgba(148,163,184,.08);color:var(--ink-dim);letter-spacing:.4px}
+.rsum{font-size:12.5px;color:var(--ink-dim);line-height:1.6}
+.btn{margin-top:auto;border:1px solid var(--indigo);background:linear-gradient(180deg,rgba(99,102,241,.28),rgba(99,102,241,.12));
+  color:#fff;padding:9px 14px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:600;
+  letter-spacing:.4px;transition:.15s;width:100%}
+.btn:hover{background:rgba(99,102,241,.4);box-shadow:0 0 18px rgba(99,102,241,.4)}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.ghost{background:transparent;border-color:var(--panel-b);color:var(--ink-dim)}
+.btn.ghost:hover{border-color:var(--indigo);color:#fff;box-shadow:none}
+.packbtn{width:auto;margin-top:0;padding:7px 15px;font-size:11.5px;text-decoration:none;
+  display:inline-flex;align-items:center;border-radius:999px}
+.filebtn{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);color:var(--ok);
+  border-radius:6px;padding:2px 9px;cursor:pointer;font-size:10px;font-weight:600;
+  letter-spacing:.3px;line-height:1.6;transition:.15s}
+.filebtn:hover{background:rgba(52,211,153,.25);box-shadow:0 0 10px rgba(52,211,153,.3)}
+.filebtn:disabled{opacity:.55;cursor:wait}
+.card .filedref{font-size:9.5px;color:var(--ok);margin-top:5px;letter-spacing:.3px;
+  font-family:"SF Mono",ui-monospace,Menlo,monospace}
+
+/* assessment */
+.assess{margin-top:12px;border-top:1px solid var(--panel-b);padding-top:12px;font-size:12.5px}
+.assess .verdict{display:inline-flex;gap:7px;align-items:center;font-weight:600;margin-bottom:8px}
+.assess p{color:var(--ink-dim);line-height:1.65;margin:0 0 10px}
+.assess ul{margin:0;padding-left:18px}
+.assess li{margin:4px 0;color:var(--ink)}
+.srcline{margin-top:9px;font-size:10.5px;color:var(--steel-d);letter-spacing:.4px}
+
+/* gauge */
+.gaugewrap{display:flex;align-items:center;gap:20px}
+.gauge{position:relative;width:150px;height:150px;flex:0 0 auto}
+.gauge svg{transform:rotate(-90deg)}
+.gnum{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gnum b{font-size:36px;font-weight:700;line-height:1}
+.gnum span{font-size:10px;letter-spacing:1.4px;color:var(--steel);text-transform:uppercase;margin-top:3px}
+.gstats{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{border:1px solid var(--panel-b);border-radius:10px;padding:9px 11px;background:rgba(148,163,184,.05)}
+.stat b{font-size:20px;font-weight:700;display:block;line-height:1.1}
+.stat span{font-size:10px;letter-spacing:.6px;color:var(--steel);text-transform:uppercase}
+
+/* board */
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.col h3{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--steel);margin:0 0 9px;
+  display:flex;align-items:center;gap:7px}
+.col h3 .cnt{margin-left:auto;background:rgba(148,163,184,.12);border-radius:999px;padding:1px 8px;font-size:10px}
+.card{border:1px solid var(--panel-b);border-radius:10px;padding:10px 11px;margin-bottom:9px;
+  background:rgba(11,17,32,.6);cursor:grab;position:relative;transition:.15s}
+.card:hover{border-color:rgba(99,102,241,.5);transform:translateY(-1px)}
+.card .ct{font-size:12px;font-weight:500;line-height:1.4;margin-bottom:7px}
+.card .cf{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--ink-dim)}
+.card .due.over{color:var(--bad);font-weight:600}
+.dbar{width:5px;height:5px;border-radius:50%;flex:0 0 auto}
+.mv{margin-left:auto;display:flex;gap:4px}
+.mv button{background:rgba(148,163,184,.1);border:1px solid var(--panel-b);color:var(--ink-dim);
+  border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1;padding:0}
+.mv button:hover{color:#fff;border-color:var(--indigo)}
+
+/* intel */
+.dm{margin-bottom:9px}
+.dm .r{display:flex;align-items:center;gap:9px;font-size:12px;margin-bottom:4px}
+.dm .r b{text-transform:capitalize;flex:0 0 92px}
+.trk{flex:1;height:7px;border-radius:4px;background:rgba(148,163,184,.1);overflow:hidden;display:flex}
+.trk i{height:100%}
+.dm .r .num{color:var(--ink-dim);font-size:11px;width:34px;text-align:right}
+.next{border:1px solid rgba(99,102,241,.35);border-radius:11px;padding:12px 14px;margin-top:14px;
+  background:linear-gradient(180deg,rgba(99,102,241,.14),transparent)}
+.next .lbl{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--indigo-b)}
+.next .t{font-size:13.5px;font-weight:600;margin:5px 0 3px}
+.next .d{font-size:11.5px;color:var(--ink-dim)}
+
+/* ambient */
+.amb{grid-column:1/-1}
+.ambhead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.year{font-size:11px;letter-spacing:2px;color:#22d3ee;border:1px solid rgba(34,211,238,.4);
+  border-radius:999px;padding:3px 11px;background:rgba(34,211,238,.06)}
+.term{background:#04060c;border:1px solid rgba(34,211,238,.16);border-radius:12px;padding:14px 16px;
+  font:12.5px/1.85 "SF Mono",ui-monospace,Menlo,Consolas,monospace;min-height:150px;color:#cfe9f5}
+.term .ln{opacity:0;transform:translateX(-6px);animation:in .3s forwards}
+@keyframes in{to{opacity:1;transform:none}}
+.term .tk{color:#22d3ee}
+.term .ok2{color:var(--ok)}
+.term .cur{color:var(--ink-dim)}
+.overdue-flag{color:var(--bad)}
+
+/* autopilot */
+.apwrap{display:inline-flex;align-items:center;gap:10px;margin-left:14px;text-transform:none;letter-spacing:0}
+.apguard{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;
+  letter-spacing:.6px;color:var(--ok);border:1px solid rgba(52,211,153,.4);
+  background:rgba(52,211,153,.08);border-radius:999px;padding:3px 9px;cursor:help}
+.aplabel{font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--indigo-b)}
+.aptoggle{width:42px;height:22px;border-radius:999px;border:1px solid var(--panel-b);
+  background:rgba(148,163,184,.14);position:relative;cursor:pointer;padding:0;transition:.2s;flex:0 0 auto}
+.aptoggle .knob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+  background:var(--steel);transition:.2s}
+.aptoggle.on{background:linear-gradient(180deg,rgba(99,102,241,.5),rgba(34,211,238,.4));
+  border-color:var(--indigo);box-shadow:0 0 14px rgba(99,102,241,.45)}
+.aptoggle.on .knob{left:22px;background:#fff}
+.apstate{margin-left:auto;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--steel);display:inline-flex;align-items:center;gap:6px}
+.apstate.run{color:var(--ok)}
+.apstate .pulse{width:7px;height:7px;border-radius:50%;background:currentColor;
+  box-shadow:0 0 8px currentColor;animation:appulse 1.1s infinite}
+@keyframes appulse{0%,100%{opacity:.35}50%{opacity:1}}
+.apfeed{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.apidle{color:var(--steel-d);font-size:12px;padding:6px 2px}
+.aprow{border:1px solid var(--panel-b);border-radius:10px;padding:9px 12px;
+  background:rgba(11,17,32,.6);opacity:0;transform:translateY(6px);animation:in .3s forwards}
+.aprow.filed{border-left:3px solid var(--ok)}
+.aprow.queued{border-left:3px solid var(--warn)}
+.aprow .aphead{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600}
+.aprow .apact{margin-left:auto;font-size:9.5px;font-weight:700;letter-spacing:.5px;
+  border-radius:5px;padding:2px 8px}
+.aprow.filed .apact{color:var(--ok);background:rgba(52,211,153,.12)}
+.aprow.queued .apact{color:var(--warn);background:rgba(251,191,36,.12)}
+.aprow .apjust{font-size:11px;color:var(--ink-dim);line-height:1.55;margin-top:5px}
+.aprow .apref{font-size:9.5px;color:var(--ok);margin-top:5px;letter-spacing:.3px;
+  font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.aprow .apref.q{color:var(--warn)}
+
+@media(max-width:1080px){.grid{grid-template-columns:1fr}.radarwrap{flex-direction:column}.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo"></div>
+  <div>
+    <h1>CompliAgent</h1>
+    <div class="sub">Living compliance radar · reg-change → obligation mapping</div>
+  </div>
+  <div class="badge">
+    <div class="pill" id="bizpill">—</div>
+    <div class="pill" id="aipill"><span class="dot mock"></span>AI</div>
+    <div class="pill">Today <b id="today">—</b></div>
+    <a class="btn packbtn" href="/audit-pack" target="_blank" rel="noopener">⬇ Download audit pack</a>
+  </div>
+</header>
+
+<div class="grid">
+  <!-- RADAR HERO -->
+  <div class="panel" style="grid-row:span 2">
+    <h2>Regulatory Radar <span class="n" id="regcount"></span></h2>
+    <div class="radarwrap">
+      <div class="radarbox">
+        <canvas id="radar" width="360" height="360"></canvas>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="detail" id="detail">
+        <div class="empty">Click a blip on the radar to inspect a regulatory change.<br><br>
+          Distance from center = urgency (closer = sooner effective date). Color = domain.
+          Run an <b>AI assessment</b> to map it onto this business.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCORE -->
+  <div class="panel">
+    <h2>Compliance Posture</h2>
+    <div class="gaugewrap">
+      <div class="gauge">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="75" cy="75" r="62" fill="none" stroke="rgba(148,163,184,.13)" stroke-width="13"/>
+          <circle id="gring" cx="75" cy="75" r="62" fill="none" stroke="url(#gg)" stroke-width="13"
+            stroke-linecap="round" stroke-dasharray="0 999"/>
+          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+        </svg>
+        <div class="gnum"><b id="score">0</b><span>Score</span></div>
+      </div>
+      <div class="gstats" id="gstats"></div>
+    </div>
+  </div>
+
+  <!-- REG INTELLIGENCE -->
+  <div class="panel">
+    <h2>Reg Intelligence</h2>
+    <div id="bydomain"></div>
+    <div class="next" id="next"></div>
+  </div>
+
+  <!-- BOARD -->
+  <div class="panel" style="grid-column:1/-1">
+    <h2>Obligations Board
+      <span class="apwrap">
+        <span class="apguard" title="Autopilot only files routine low/medium-severity renewals hands-free; high-stakes items are queued for human sign-off.">
+          <span class="dbar" style="background:var(--ok);width:6px;height:6px"></span>SAFE-ACTIONS ONLY
+        </span>
+        <span class="aplabel">AUTOPILOT</span>
+        <button class="aptoggle" id="aptoggle" role="switch" aria-checked="false"><span class="knob"></span></button>
+      </span>
+      <span class="n">drag-free · use ‹ › to move</span>
+    </h2>
+    <div class="cols" id="board"></div>
+  </div>
+
+  <!-- AUTOPILOT FEED -->
+  <div class="panel" id="appanel" style="grid-column:1/-1;display:none">
+    <h2>Autopilot Feed
+      <span class="apstate" id="apstate"></span>
+      <span class="n" id="apcounts"></span>
+    </h2>
+    <div class="apfeed" id="apfeed">
+      <div class="apidle">Autopilot idle — toggle it ON to let the agent work the board hands-free.</div>
+    </div>
+  </div>
+
+  <!-- AMBIENT -->
+  <div class="panel amb">
+    <div class="ambhead">
+      <h2 style="margin:0">Ambient Mode</h2>
+      <span class="year">PREVIEW · 2036</span>
+      <span style="font-size:11.5px;color:var(--ink-dim)">The agent detects a renewal window and files it before the deadline — no human in the loop.</span>
+      <button class="btn ghost" style="width:auto;margin-left:auto" id="ambbtn">▶ Run auto-file simulation</button>
+    </div>
+    <div class="term" id="term"><span class="cur">agent@compliagent:~$ awaiting trigger…</span></div>
+  </div>
+</div>
+</div>
+
+<script>
+const DCOL={"data-privacy":"var(--dp)","security":"var(--sec)","AML":"var(--aml)",
+  "employment":"var(--emp)","tax":"var(--tax)","sector":"var(--sector)"};
+const DCOL_HEX={"data-privacy":"#6366f1","security":"#22d3ee","AML":"#f472b6",
+  "employment":"#a78bfa","tax":"#fbbf24","sector":"#34d399"};
+let STATE=null, SEL=null, TODAY=null;
+
+async function boot(){
+  const r=await fetch("/api/bootstrap"); STATE=await r.json(); TODAY=STATE.today;
+  document.getElementById("today").textContent=TODAY;
+  document.getElementById("bizpill").innerHTML="<b>"+STATE.business.name+"</b> · "+STATE.business.headcount+" staff";
+  const ai=document.getElementById("aipill");
+  const live=STATE.ai_mode.startsWith("LIVE");
+  ai.innerHTML='<span class="dot '+(live?"live":"mock")+'"></span>'+STATE.ai_mode;
+  document.getElementById("regcount").textContent=STATE.regs.length+" changes tracked";
+  buildLegend(); drawRadar(); renderScore(); renderIntel(); renderBoard();
+}
+
+function buildLegend(){
+  const el=document.getElementById("legend"); el.innerHTML="";
+  Object.keys(DCOL_HEX).forEach(d=>{
+    el.innerHTML+='<span><i style="background:'+DCOL_HEX[d]+'"></i>'+d+'</span>';
+  });
+}
+
+// ---- radar
+const cv=document.getElementById("radar"), cx=cv.getContext("2d");
+const CXY=180, RMAX=160;
+let sweep=0, blips=[];
+function computeBlips(){
+  const maxd=Math.max(...STATE.regs.map(r=>r.days_to_effective),120);
+  blips=STATE.regs.map((r,i)=>{
+    const dtc=Math.max(r.days_to_effective,-10);
+    const norm=Math.min(Math.max(dtc,0),maxd)/maxd; // 0 soon -> 1 far
+    const rad=28+norm*(RMAX-30);
+    const ang=(i*137.5)%360*Math.PI/180; // golden-angle spread, stable
+    return {reg:r,x:CXY+Math.cos(ang)*rad,y:CXY+Math.sin(ang)*rad,ang,rad,
+      color:DCOL_HEX[r.domain]||"#94a3b8"};
+  });
+}
+function drawRadar(){
+  computeBlips();
+  requestAnimationFrame(loop);
+  cv.onclick=e=>{
+    const b=cv.getBoundingClientRect();
+    const mx=e.clientX-b.left, my=e.clientY-b.top;
+    let best=null,bd=1e9;
+    blips.forEach(bl=>{const d=Math.hypot(mx-bl.x,my-bl.y);if(d<bd){bd=d;best=bl}});
+    if(best&&bd<16) selectReg(best.reg);
+  };
+  cv.style.cursor="crosshair";
+}
+function loop(){
+  cx.clearRect(0,0,360,360);
+  // rings
+  for(let i=1;i<=4;i++){cx.beginPath();cx.arc(CXY,CXY,i*40,0,7);cx.strokeStyle="rgba(148,163,184,"+(0.05+ (i==4?0:0)) + ")";cx.lineWidth=1;cx.strokeStyle="rgba(148,163,184,.09)";cx.stroke();}
+  cx.beginPath();cx.moveTo(20,CXY);cx.lineTo(340,CXY);cx.moveTo(CXY,20);cx.lineTo(CXY,340);
+  cx.strokeStyle="rgba(148,163,184,.07)";cx.stroke();
+  // sweep
+  sweep=(sweep+0.9)%360; const sr=sweep*Math.PI/180;
+  const g=cx.createConicGradient?cx.createConicGradient(sr,CXY,CXY):null;
+  const grad=cx.createRadialGradient(CXY,CXY,0,CXY,CXY,RMAX);
+  grad.addColorStop(0,"rgba(99,102,241,.25)");grad.addColorStop(1,"rgba(99,102,241,0)");
+  cx.save();cx.translate(CXY,CXY);cx.rotate(sr);
+  cx.beginPath();cx.moveTo(0,0);cx.arc(0,0,RMAX,-0.5,0);cx.closePath();
+  cx.fillStyle=grad;cx.fill();cx.restore();
+  cx.beginPath();cx.moveTo(CXY,CXY);cx.lineTo(CXY+Math.cos(sr)*RMAX,CXY+Math.sin(sr)*RMAX);
+  cx.strokeStyle="rgba(129,140,248,.55)";cx.lineWidth=1.4;cx.stroke();
+  // blips
+  blips.forEach(bl=>{
+    let da=((sweep - bl.ang*180/Math.PI)%360+360)%360;
+    const glow=da<70?(1-da/70):0;
+    const isSel=SEL&&SEL.id===bl.reg.id;
+    const rr=isSel?6:4;
+    cx.beginPath();cx.arc(bl.x,bl.y,rr+glow*4,0,7);
+    cx.fillStyle=bl.color;cx.globalAlpha=0.28+glow*0.6+(isSel?0.3:0);cx.fill();cx.globalAlpha=1;
+    cx.beginPath();cx.arc(bl.x,bl.y,rr,0,7);cx.fillStyle=bl.color;cx.fill();
+    if(isSel){cx.beginPath();cx.arc(bl.x,bl.y,11,0,7);cx.strokeStyle=bl.color;cx.lineWidth=1.4;cx.stroke();}
+  });
+  cx.beginPath();cx.arc(CXY,CXY,3,0,7);cx.fillStyle="#818cf8";cx.fill();
+  requestAnimationFrame(loop);
+}
+
+function selectReg(reg){
+  SEL=reg;
+  const dueStr=reg.days_to_effective>=0?("in "+reg.days_to_effective+"d"):(Math.abs(reg.days_to_effective)+"d ago");
+  const d=document.getElementById("detail");
+  d.innerHTML=`
+    <div class="rtitle">${reg.title}</div>
+    <div class="meta">
+      <span class="tag" style="border-color:${DCOL_HEX[reg.domain]}66;color:${DCOL_HEX[reg.domain]}">${reg.domain}</span>
+      <span class="tag">${reg.jurisdiction}</span>
+      <span class="tag">effective ${reg.effective} · ${dueStr}</span>
+      <span class="tag">${reg.severity} severity</span>
+    </div>
+    <div class="rsum">${reg.summary}</div>
+    <div id="assessSlot"></div>
+    <button class="btn" id="assessBtn">⚡ Assess against this business</button>`;
+  document.getElementById("assessBtn").onclick=()=>runAssess(reg.id);
+}
+
+async function runAssess(id){
+  const btn=document.getElementById("assessBtn");
+  btn.disabled=true; btn.textContent="Analyzing…";
+  const r=await fetch("/api/assess",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({reg_id:id})});
+  const a=await r.json();
+  btn.disabled=false; btn.textContent="⚡ Re-assess";
+  const applies=a.applies;
+  const vcol=applies?"var(--bad)":"var(--ok)";
+  const vtxt=applies?"APPLIES TO THIS BUSINESS":"LOW DIRECT EXPOSURE";
+  document.getElementById("assessSlot").innerHTML=`
+    <div class="assess">
+      <div class="verdict" style="color:${vcol}"><span class="dbar" style="background:${vcol};width:8px;height:8px"></span>${vtxt}</div>
+      <p>${a.applicability||""}</p>
+      ${(a.actions&&a.actions.length)?"<b style='font-size:11px;letter-spacing:.6px;color:var(--steel)'>ACTION ITEMS</b><ul>"+a.actions.map(x=>"<li>"+x+"</li>").join("")+"</ul>":""}
+      <div class="srcline">↳ generated by ${a.source}</div>
+    </div>`;
+}
+
+// ---- score gauge
+function renderScore(){
+  const s=STATE.score;
+  document.getElementById("score").textContent=s;
+  const c=2*Math.PI*62, len=c*s/100;
+  const ring=document.getElementById("gring");
+  ring.setAttribute("stroke-dasharray",len+" "+(c-len));
+  ring.setAttribute("stroke",s>=75?"url(#gg)":s>=50?"#fbbf24":"#f87171");
+  const st=STATE.stats;
+  document.getElementById("gstats").innerHTML=`
+    <div class="stat"><b style="color:var(--ok)">${st.done}</b><span>Done</span></div>
+    <div class="stat"><b style="color:var(--indigo-b)">${st.in_progress}</b><span>In progress</span></div>
+    <div class="stat"><b>${st.open}</b><span>Open</span></div>
+    <div class="stat"><b style="color:${st.overdue?'var(--bad)':'var(--ink)'}">${st.overdue}</b><span>Overdue</span></div>`;
+}
+
+// ---- intel
+function renderIntel(){
+  const bd=document.getElementById("bydomain"); bd.innerHTML="";
+  Object.entries(STATE.by_domain).sort((a,b)=>{
+    const ta=a[1].open+a[1].in_progress+a[1].done, tb=b[1].open+b[1].in_progress+b[1].done;
+    return tb-ta;
+  }).forEach(([dom,v])=>{
+    const tot=v.open+v.in_progress+v.done;
+    const col=DCOL_HEX[dom]||"#94a3b8";
+    bd.innerHTML+=`<div class="dm"><div class="r">
+      <b>${dom}</b>
+      <div class="trk">
+        <i style="width:${v.done/tot*100}%;background:var(--ok)"></i>
+        <i style="width:${v.in_progress/tot*100}%;background:${col}"></i>
+        <i style="width:${v.open/tot*100}%;background:rgba(148,163,184,.28)"></i>
+      </div><span class="num">${tot}</span></div></div>`;
+  });
+  const nd=STATE.next_deadline;
+  const nextEl=document.getElementById("next");
+  if(nd){
+    const days=Math.round((new Date(nd.due)-new Date(TODAY))/864e5);
+    const over=days<0;
+    nextEl.innerHTML=`<div class="lbl">Next deadline${over?' · <span class="overdue-flag">OVERDUE</span>':''}</div>
+      <div class="t">${nd.title}</div>
+      <div class="d">${nd.domain} · due ${nd.due} · <b style="color:${over?'var(--bad)':'var(--indigo-b)'}">${over?Math.abs(days)+"d overdue":days+"d left"}</b></div>`;
+  } else nextEl.innerHTML='<div class="lbl">All clear</div><div class="d">No open obligations.</div>';
+}
+
+// ---- board
+function renderBoard(){
+  const board=document.getElementById("board");
+  const cols=[["Open","Open"],["In-progress","In progress"],["Done","Done"]];
+  board.innerHTML="";
+  cols.forEach(([key,label])=>{
+    const items=STATE.obligations.filter(o=>o.status===key);
+    const col=document.createElement("div"); col.className="col";
+    col.innerHTML=`<h3>${label}<span class="cnt">${items.length}</span></h3>`;
+    items.forEach(o=>{
+      const days=Math.round((new Date(o.due)-new Date(TODAY))/864e5);
+      const over=key!=="Done"&&days<0;
+      const col2=DCOL_HEX[o.domain]||"#94a3b8";
+      const card=document.createElement("div"); card.className="card";
+      const filedRef=(key==="Done"&&o.confirmation)?`<div class="filedref">✓ auto-filed · ${o.confirmation}</div>`:"";
+      card.innerHTML=`<div class="ct">${o.title}</div>
+        <div class="cf"><span class="dbar" style="background:${col2}"></span>${o.domain}
+        <span class="due ${over?'over':''}">· due ${o.due}${over?" ("+Math.abs(days)+"d over)":""}</span>
+        <span class="mv">
+          ${key!=="Done"?'<button class="filebtn" data-file>⚡ Auto-file</button>':''}
+          ${key!=="Open"?'<button data-l>‹</button>':''}
+          ${key!=="Done"?'<button data-r>›</button>':''}
+        </span></div>${filedRef}`;
+      const order=["Open","In-progress","Done"];
+      const i=order.indexOf(key);
+      const l=card.querySelector("[data-l]"), r=card.querySelector("[data-r]");
+      const f=card.querySelector("[data-file]");
+      if(l) l.onclick=()=>move(o.id,order[i-1]);
+      if(r) r.onclick=()=>move(o.id,order[i+1]);
+      if(f) f.onclick=()=>autoFile(o.id,f);
+      col.appendChild(card);
+    });
+    board.appendChild(col);
+  });
+}
+async function move(id,status){
+  await fetch("/api/status",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id,status})});
+  const o=STATE.obligations.find(x=>x.id===id); o.status=status;
+  // recompute score+stats client-side by re-bootstrapping
+  const r=await fetch("/api/bootstrap"); STATE=await r.json();
+  renderScore(); renderIntel(); renderBoard();
+}
+
+// ---- auto-file: mark obligation Done with a filed timestamp + confirmation ref
+async function autoFile(id,btn){
+  const from=STATE.score;
+  if(btn){btn.disabled=true; btn.textContent="filing…";}
+  const r=await fetch("/api/file",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({obligation_id:id})});
+  const res=await r.json();
+  if(res.error){if(btn){btn.disabled=false; btn.textContent="⚡ Auto-file";} return res;}
+  // re-bootstrap for authoritative state, then animate the gauge from old->new
+  const b=await fetch("/api/bootstrap"); STATE=await b.json();
+  animateScore(from,STATE.score);
+  renderIntel(); renderBoard();
+  return res;
+}
+
+// animate the gauge ring + number from a->b
+function animateScore(from,to){
+  const el=document.getElementById("score"), ring=document.getElementById("gring");
+  const c=2*Math.PI*62, t0=performance.now(), dur=650;
+  function frame(t){
+    const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
+    const v=from+(to-from)*e, len=c*v/100;
+    el.textContent=Math.round(v);
+    ring.setAttribute("stroke-dasharray",len+" "+(c-len));
+    ring.setAttribute("stroke",v>=75?"url(#gg)":v>=50?"#fbbf24":"#f87171");
+    if(p<1) requestAnimationFrame(frame); else renderScore();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---- ambient
+document.getElementById("ambbtn").onclick=async()=>{
+  const btn=document.getElementById("ambbtn"); btn.disabled=true;
+  const term=document.getElementById("term"); term.innerHTML="";
+  const scoreBefore=STATE.score;
+  // pick the nearest-due OPEN/in-progress obligation — the one the agent would file next
+  const open=STATE.obligations.filter(o=>o.status!=="Done")
+    .sort((a,b)=>new Date(a.due)-new Date(b.due));
+  const target=open[0]||null;
+  const reg=target?STATE.regs.find(r=>r.id===target.reg_id):null;
+  const r=await fetch("/api/ambient",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({reg_id:reg?reg.id:8})});
+  const a=await r.json();
+  const label=target?target.title:a.reg.title;
+  const lines=[
+    `<span class="tk">[${a.ts}]</span> ambient-agent online`,
+    `Scanned board — nearest-due obligation: '${label}'.`,
+    "Pulled prior filing + current business profile from vault.",
+    "Reconciled beneficial-ownership + control changes since last cycle.",
+    "Auto-generated filing package; validated against schema v4.",
+    `Filing with registry (source: ${reg?reg.jurisdiction:a.reg.jurisdiction}) …`,
+  ];
+  let i=0, fileRes=null;
+  const tick=async()=>{
+    if(i>=lines.length){
+      // actually file the nearest-due obligation via the real endpoint
+      if(target){
+        fileRes=await autoFile(target.id,null);
+        const conf=(fileRes&&fileRes.confirmation)?fileRes.confirmation:a.confirmation;
+        const delta=STATE.score-scoreBefore;
+        term.innerHTML+=`<div class="ln"><span class="cur">agent$</span> Booked evidence · obligation → Done · confirmation ${conf} <span class="ok2">✓</span></div>`;
+        term.innerHTML+=`<div class="ln ok2">✓ auto-filed '${label}' · posture ${scoreBefore} → ${STATE.score}${delta>0?` (+${delta})`:""} · human-in-the-loop: none</div>`;
+      }else{
+        term.innerHTML+=`<div class="ln ok2">✓ board clear — nothing pending to auto-file.</div>`;
+      }
+      term.scrollTop=term.scrollHeight; btn.disabled=false; return;
+    }
+    term.innerHTML+=`<div class="ln"><span class="cur">agent$</span> ${lines[i]} ${i>0?'<span class="ok2">✓</span>':''}</div>`;
+    term.scrollTop=term.scrollHeight; i++;
+    setTimeout(tick,i<=1?250:620);
+  };
+  tick();
+};
+
+// ---- autopilot: hands-free filing loop
+let AP_ON=false, AP_TIMER=null, AP_BUSY=false, AP_SEEN=new Set();
+const AP_INTERVAL=4000;
+
+function apToggle(){
+  AP_ON=!AP_ON;
+  const t=document.getElementById("aptoggle");
+  t.classList.toggle("on",AP_ON); t.setAttribute("aria-checked",AP_ON);
+  document.getElementById("appanel").style.display=AP_ON?"":"none";
+  if(AP_ON){ apSetState(true); apStep(); AP_TIMER=setInterval(apStep,AP_INTERVAL); }
+  else{ clearInterval(AP_TIMER); AP_TIMER=null; apSetState(false); }
+}
+
+function apSetState(running,extra){
+  const s=document.getElementById("apstate");
+  s.className="apstate"+(running?" run":"");
+  s.innerHTML=running?'<span class="pulse"></span>ENGAGED'+(extra||""):"STANDBY";
+}
+
+function apFeedRow(step){
+  const feed=document.getElementById("apfeed");
+  const idle=feed.querySelector(".apidle"); if(idle) idle.remove();
+  const filed=step.action==="filed";
+  const cls=filed?"filed":"queued";
+  const ob=step.obligation||{}; const reg=step.reg||{};
+  const actTxt=filed?"⚡ AUTO-FILED":"⏸ QUEUED · HUMAN SIGN-OFF";
+  const ref=filed
+    ? (step.confirmation?`<div class="apref">✓ confirmation ${step.confirmation}</div>`:"")
+    : `<div class="apref q">⚑ high-stakes (${reg.severity||"high"} severity · ${reg.jurisdiction||"—"}) — held for approval</div>`;
+  const row=document.createElement("div");
+  row.className="aprow "+cls;
+  row.innerHTML=`<div class="aphead"><span class="dbar" style="background:${DCOL_HEX[ob.domain]||'#94a3b8'}"></span>${ob.title||"—"}
+    <span class="apact">${actTxt}</span></div>
+    <div class="apjust">${step.justification||""}</div>${ref}`;
+  feed.prepend(row);
+}
+
+async function apStep(){
+  if(AP_BUSY) return;
+  AP_BUSY=true;
+  try{
+    const from=STATE?STATE.score:0;
+    const r=await fetch("/api/autopilot/step",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:"{}"});
+    const step=await r.json();
+    if(step.action==="filed"||step.action==="queued for human approval"){
+      if(step.obligation && !AP_SEEN.has(step.obligation.id+"|"+step.action)){
+        AP_SEEN.add(step.obligation.id+"|"+step.action);
+        apFeedRow(step);
+      }
+      // refresh authoritative state + animate gauge as items file
+      const b=await fetch("/api/bootstrap"); STATE=await b.json();
+      animateScore(from,STATE.score); renderIntel(); renderBoard();
+    }
+    // pull live state summary
+    const st=await(await fetch("/api/autopilot/state")).json();
+    document.getElementById("apcounts").textContent=
+      `${st.filed_count} filed · ${st.needs_approval} awaiting human · ${st.remaining} pending`;
+    if(!st.running || step.done){
+      // nothing left the autopilot can act on — stand down but keep panel visible
+      clearInterval(AP_TIMER); AP_TIMER=null; AP_ON=false;
+      const t=document.getElementById("aptoggle");
+      t.classList.remove("on"); t.setAttribute("aria-checked","false");
+      apSetState(false);
+      const s=document.getElementById("apstate");
+      s.innerHTML=st.needs_approval?`STANDBY · ${st.needs_approval} awaiting human`:"COMPLETE";
+    }
+  }catch(e){ /* transient — next tick retries */ }
+  finally{ AP_BUSY=false; }
+}
+
+document.getElementById("aptoggle").onclick=apToggle;
+
+boot();
+</script>
+</body>
+</html>

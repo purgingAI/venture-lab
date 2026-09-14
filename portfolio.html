@@ -1,0 +1,58 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Venture Lab — 10 Vertical‑AI Apps</title>
+<style>
+:root{--bg:#05060b;--txt:#eef0fb;--dim:#9aa0be;--stroke:rgba(255,255,255,.08)}
+*{box-sizing:border-box;margin:0;font-family:'Segoe UI',system-ui,sans-serif}
+body{background:radial-gradient(1200px 800px at 50% -10%,#12132a,#05060b 70%);color:var(--txt);min-height:100vh;padding:44px 22px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+.head{text-align:center;margin-bottom:10px}
+.badge{display:inline-block;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--dim);border:1px solid var(--stroke);padding:6px 14px;border-radius:999px}
+h1{font-size:40px;font-weight:800;letter-spacing:-.02em;margin:16px 0 8px;background:linear-gradient(90deg,#a855f7,#22d3ee,#fb7185);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--dim);font-size:15px;max-width:680px;margin:0 auto 6px;line-height:1.6}
+.thesis{color:#c6bfe0;font-size:13px;max-width:760px;margin:14px auto 30px;text-align:center;line-height:1.7;background:rgba(255,255,255,.03);border:1px solid var(--stroke);border-radius:14px;padding:14px 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:18px}
+.card{position:relative;border-radius:18px;padding:20px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid var(--stroke);text-decoration:none;color:inherit;transition:.18s;overflow:hidden}
+.card:hover{transform:translateY(-3px);border-color:var(--c);box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 40px -10px var(--c)}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--c)}
+.row{display:flex;align-items:center;gap:11px;margin-bottom:8px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--c);box-shadow:0 0 12px var(--c);flex:none}
+.nm{font-size:19px;font-weight:700}
+.port{margin-left:auto;font:600 11px ui-monospace,monospace;color:var(--dim);border:1px solid var(--stroke);padding:3px 8px;border-radius:8px}
+.seg{font-size:12.5px;color:var(--dim);margin-bottom:12px;min-height:34px;line-height:1.45}
+.feat{font-size:11.5px;color:#cfd6f5;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:9px;padding:7px 10px;line-height:1.4}
+.feat b{color:var(--c)}
+.foot{margin-top:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+.foot .go{margin-left:auto;color:var(--c);font-weight:700}
+.tip{text-align:center;color:var(--dim);font-size:12px;margin-top:30px;font-family:ui-monospace,monospace}
+</style></head><body>
+<div class="wrap">
+  <div class="head">
+    <span class="badge">Venture Lab · 2026</span>
+    <h1>10 Vertical‑AI Apps for markets nobody serves well</h1>
+    <p class="sub">Each attacks a researched market gap the big players ignore — and each is built as a proprietary‑data webapp designed to graduate into an always‑on <b>ambient agent</b>.</p>
+    <p class="thesis">Thesis: vertical AI micro‑SaaS (~$95B, 2–3× horizontal growth, 59% AI attach). Moat = proprietary data + workflow depth, not model features. 10‑year kill‑shot: ambient agents replace apps — so every one here carries an <b>“Ambient mode (2036)”</b> path.</p>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="tip">start everything → <b>cd ~/venture-lab &amp;&amp; ./demo.sh up</b> — then this page’s cards go live</div>
+</div>
+<script>
+const APPS=[
+ {n:"TradePilot",p:8801,c:"#f59e0b",s:"Solo trades (plumbers/HVAC) job→cash cockpit, voice‑first.",f:"+ public quote page → <b>approve & 20% deposit</b>"},
+ {n:"EmberHealth",p:8802,c:"#fb7185",s:"Flare prediction for PCOS / endo / fibromyalgia — ignored conditions.",f:"+ <b>doctor report</b> export + trigger correlations"},
+ {n:"ClaimGuard",p:8803,c:"#2dd4bf",s:"Pre‑submission medical billing‑error catcher for small practices.",f:"+ <b>batch scan</b> + denial‑trend analytics"},
+ {n:"FreightNormal",p:8804,c:"#22d3ee",s:"Freight quote normalization for small brokers.",f:"+ <b>book & tender</b> (rate‑con) + lane watchlist"},
+ {n:"CloseLoop",p:8805,c:"#eab308",s:"Real‑estate transaction reconciliation before closing.",f:"+ <b>closing packet</b> + funding‑readiness"},
+ {n:"LedgerBridge",p:8806,c:"#10b981",s:"Integration glue across a firm's 60‑70 accounting tools.",f:"+ <b>month‑end close</b> + close report"},
+ {n:"LoreKeeper",p:8807,c:"#ff2fb0",s:"Creator super‑fan D2C engine + AI persona (voice).",f:"+ <b>checkout</b> + creator revenue dashboard"},
+ {n:"CompliAgent",p:8808,c:"#6366f1",s:"Living compliance radar for regulated SMBs.",f:"+ report‑grade <b>audit pack</b> + auto‑file"},
+ {n:"FocusForge",p:8809,c:"#a3e635",s:"Executive‑function OS built for ADHD brains.",f:"+ <b>streaks + Momentum</b> dashboard"},
+ {n:"Mesa",p:8810,c:"#a855f7",s:"Ambient operational brain for the mid‑market (dogfoods ACE).",f:"+ <b>ambient actions</b>: alerts → act → mutate graph"},
+];
+document.getElementById('grid').innerHTML=APPS.map((a,i)=>`
+ <a class="card" style="--c:${a.c}" href="http://localhost:${a.p}/" target="_blank">
+   <div class="row"><span class="dot"></span><span class="nm">${a.n}</span><span class="port">:${a.p}</span></div>
+   <div class="seg">${String(i+1).padStart(2,'0')} · ${a.s}</div>
+   <div class="feat">${a.f}</div>
+   <div class="foot">Ambient‑mode (2036) ready <span class="go">Open →</span></div>
+ </a>`).join('');
+</script></body></html>

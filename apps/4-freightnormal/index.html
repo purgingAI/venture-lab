@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>FreightNormal — Quote Normalization Console</title>
+<style>
+:root{
+  --cyan:#22d3ee; --cyan-dim:#0891b2; --cyan-glow:rgba(34,211,238,.35);
+  --bg:#0b1220; --bg2:#0a0f1a; --panel:rgba(15,23,42,.66); --panel-solid:#0f1a2b;
+  --line:rgba(34,211,238,.16); --slate:#8aa0bd; --slate2:#5b7093;
+  --white:#eaf3fb; --danger:#f97066; --warn:#fbbf5c; --good:#34d399;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:ui-sans-serif,'Segoe UI',system-ui,'SF Mono',sans-serif;
+  background:
+    radial-gradient(1200px 640px at 80% -10%,rgba(34,211,238,.12),transparent 60%),
+    radial-gradient(900px 520px at 6% 110%,rgba(34,211,238,.07),transparent 60%),
+    var(--bg);
+  color:var(--white); min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--cyan);text-decoration:none}
+.wrap{max-width:1340px;margin:0 auto;padding:24px 24px 80px}
+header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{
+  width:46px;height:46px;border-radius:13px;position:relative;
+  background:linear-gradient(145deg,#0d2130,#07131f);
+  border:1px solid var(--line);box-shadow:0 0 26px var(--cyan-glow) inset,0 0 0 1px rgba(34,211,238,.1);
+  display:grid;place-items:center;
+}
+.logo::before{content:"";width:22px;height:22px;border-radius:7px;
+  background:conic-gradient(from 200deg,var(--cyan),#0e7490,var(--cyan));
+  filter:drop-shadow(0 0 9px var(--cyan-glow));}
+.brand h1{font-size:20px;letter-spacing:.5px;margin:0;font-weight:800}
+.brand h1 span{color:var(--cyan)}
+.brand p{margin:2px 0 0;font-size:11px;color:var(--slate2);letter-spacing:2.4px;text-transform:uppercase}
+.ai-badge{font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);
+  color:var(--cyan);background:rgba(34,211,238,.06);letter-spacing:.5px;white-space:nowrap}
+.ai-badge b{color:#fff}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);display:inline-block;margin-right:7px;
+  box-shadow:0 0 8px var(--cyan);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* hero canvas */
+.hero{position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:22px;
+  background:linear-gradient(180deg,rgba(10,18,32,.6),rgba(8,13,24,.85));
+  box-shadow:0 12px 46px rgba(0,0,0,.45)}
+#lanes{display:block;width:100%;height:220px}
+.hero-cap{position:absolute;left:20px;top:16px;pointer-events:none}
+.hero-cap .k{font-size:11px;letter-spacing:2.6px;text-transform:uppercase;color:var(--slate2)}
+.hero-cap .v{font-size:15px;color:var(--white);margin-top:3px;font-weight:600}
+.hero-cap .v b{color:var(--cyan)}
+
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.tab{font-size:12.5px;letter-spacing:.6px;padding:9px 16px;border-radius:11px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(15,23,42,.4);color:var(--slate);transition:.15s}
+.tab:hover{color:var(--white);border-color:rgba(34,211,238,.4)}
+.tab.on{color:#04121a;background:linear-gradient(160deg,var(--cyan),#0e7490);border-color:transparent;font-weight:700;
+  box-shadow:0 0 20px var(--cyan-glow)}
+
+.grid{display:grid;grid-template-columns:1.02fr 1.28fr;gap:20px;align-items:start}
+@media(max-width:980px){.grid{grid-template-columns:1fr}}
+.panel{
+  background:var(--panel);backdrop-filter:blur(12px);
+  border:1px solid var(--line);border-radius:16px;padding:20px;
+  box-shadow:0 10px 40px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.02) inset;
+}
+.panel h2{font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--slate);
+  margin:0 0 16px;display:flex;align-items:center;gap:9px;font-weight:600}
+.panel h2::before{content:"";width:6px;height:16px;border-radius:3px;background:var(--cyan);
+  box-shadow:0 0 10px var(--cyan-glow)}
+.panel h2 .side{margin-left:auto;font-size:10.5px;letter-spacing:1px;color:var(--slate2)}
+
+textarea,select,input{
+  width:100%;background:rgba(6,12,22,.7);border:1px solid var(--line);border-radius:11px;
+  color:var(--white);font-family:'SF Mono',ui-monospace,monospace;font-size:12.5px;padding:12px 13px;
+  outline:none;transition:.15s}
+textarea:focus,input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+textarea{min-height:150px;resize:vertical;line-height:1.5}
+label.fld{display:block;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--slate2);margin:0 0 6px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1}
+.presets{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 4px}
+.chip{font-size:11px;padding:6px 11px;border-radius:9px;cursor:pointer;border:1px solid var(--line);
+  background:rgba(34,211,238,.05);color:var(--cyan);transition:.15s}
+.chip:hover{background:rgba(34,211,238,.14)}
+.btn{cursor:pointer;border:none;border-radius:11px;padding:12px 18px;font-size:12.5px;font-weight:700;letter-spacing:.5px;
+  background:linear-gradient(160deg,var(--cyan),#0e7490);color:#04121a;transition:.15s;box-shadow:0 6px 22px var(--cyan-glow)}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--line);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.mt{margin-top:14px}
+
+/* normalized card */
+.norm{border:1px solid var(--line);border-radius:13px;padding:16px;background:rgba(6,12,22,.55);margin-top:4px}
+.norm .lane{font-size:15px;font-weight:700}
+.norm .lane b{color:var(--cyan)}
+.norm .car{font-size:12px;color:var(--slate);margin-top:2px}
+.br{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+.br .cell{background:rgba(15,23,42,.6);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+.br .cell .k{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--slate2)}
+.br .cell .v{font-size:17px;font-weight:700;margin-top:4px}
+.br .cell.total .v{color:var(--cyan)}
+.br .cell.pm .v{color:var(--good)}
+.verdict{margin-top:13px;display:flex;align-items:center;gap:10px;font-size:12.5px;
+  padding:10px 13px;border-radius:10px;border:1px solid var(--line);background:rgba(15,23,42,.5)}
+.verdict .pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
+.pill.below{background:rgba(52,211,153,.15);color:var(--good)}
+.pill.above{background:rgba(249,112,102,.15);color:var(--danger)}
+.pill.at{background:rgba(34,211,238,.15);color:var(--cyan)}
+.pill.no{background:rgba(148,163,184,.15);color:var(--slate)}
+.acc{margin-top:12px;font-size:11.5px;color:var(--slate)}
+.acc .it{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed rgba(34,211,238,.1)}
+.eng{margin-top:10px;font-size:10.5px;color:var(--slate2);letter-spacing:.5px}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--slate2);
+  padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid rgba(34,211,238,.08)}
+tr.best td{background:rgba(52,211,153,.07)}
+td.mono{font-family:'SF Mono',ui-monospace,monospace}
+.rank{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:12px;
+  background:rgba(34,211,238,.1);color:var(--cyan)}
+.win{background:rgba(52,211,153,.16);color:var(--good)}
+.tag{font-size:9.5px;padding:2px 7px;border-radius:6px;background:rgba(34,211,238,.12);color:var(--cyan);margin-left:6px}
+
+.empty{color:var(--slate2);font-size:12.5px;text-align:center;padding:26px 10px;line-height:1.6}
+
+/* margin calc */
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.calc .out{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.calc .out .cell{background:rgba(15,23,42,.6);border:1px solid var(--line);border-radius:10px;padding:11px;text-align:center}
+.calc .out .cell .k{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--slate2)}
+.calc .out .cell .v{font-size:18px;font-weight:800;margin-top:4px}
+
+/* pricing */
+.price{border:1px solid var(--line);border-radius:14px;padding:20px;background:
+  radial-gradient(400px 200px at 90% -20%,rgba(34,211,238,.12),transparent 60%),rgba(6,12,22,.5)}
+.price .big{font-size:38px;font-weight:800}
+.price .big span{font-size:15px;color:var(--slate);font-weight:500}
+.price ul{list-style:none;padding:0;margin:14px 0 0;font-size:12.5px;color:var(--slate)}
+.price li{padding:6px 0;display:flex;gap:9px;align-items:center}
+.price li::before{content:"◆";color:var(--cyan);font-size:9px}
+.slider{margin-top:16px}
+.slider input[type=range]{-webkit-appearance:none;height:6px;border-radius:6px;padding:0;
+  background:linear-gradient(90deg,var(--cyan),#0e7490);accent-color:var(--cyan)}
+.overage{margin-top:12px;display:flex;justify-content:space-between;align-items:baseline;
+  padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:rgba(15,23,42,.5)}
+.overage .amt{font-size:22px;font-weight:800;color:var(--cyan)}
+
+/* ambient */
+.amb-step{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px dashed rgba(34,211,238,.12)}
+.amb-step .n{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:11px;font-weight:700;background:rgba(34,211,238,.14);color:var(--cyan);box-shadow:0 0 10px var(--cyan-glow)}
+.amb-step .txt{font-size:12.5px;color:var(--slate);line-height:1.5}
+.amb-step .txt b{color:var(--white)}
+.amb-save{margin-top:14px;text-align:center;padding:14px;border:1px dashed var(--line);border-radius:12px}
+.amb-save .v{font-size:26px;font-weight:800;color:var(--good)}
+.hide{display:none}
+.small{font-size:11px;color:var(--slate2)}
+
+/* autopilot */
+.ap-bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:13px;padding:16px 18px;
+  background:radial-gradient(500px 160px at 100% -30%,rgba(34,211,238,.10),transparent 60%),rgba(6,12,22,.5)}
+.ap-toggle{width:58px;height:30px;border-radius:20px;flex:none;cursor:pointer;position:relative;
+  background:rgba(15,23,42,.9);border:1px solid var(--line);transition:.2s}
+.ap-toggle.on{background:linear-gradient(120deg,var(--cyan),#0e7490);border-color:transparent;
+  box-shadow:0 0 18px var(--cyan-glow)}
+.ap-knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#eaf3fb;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.ap-toggle.on .ap-knob{left:31px;background:#04121a}
+.ap-label{flex:1;min-width:200px}
+.ap-title{font-size:13px;font-weight:700;letter-spacing:1px}
+.ap-title b{color:var(--slate);margin-left:4px}
+.ap-toggle.on ~ .ap-label .ap-title b{color:var(--good)}
+.ap-stats{display:flex;gap:10px}
+.ap-stat{background:rgba(15,23,42,.6);border:1px solid var(--line);border-radius:10px;
+  padding:8px 14px;text-align:center;min-width:62px}
+.ap-stat .k{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--slate2)}
+.ap-stat .v{font-size:20px;font-weight:800;margin-top:2px}
+.ap-feed{margin-top:16px;max-height:340px;overflow-y:auto}
+.ap-ev{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px dashed rgba(34,211,238,.12);
+  animation:apin .35s ease}
+@keyframes apin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.ap-ev .badge{width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;
+  font-size:12px;font-weight:700}
+.ap-ev .badge.book{background:rgba(52,211,153,.16);color:var(--good);box-shadow:0 0 10px rgba(52,211,153,.35)}
+.ap-ev .badge.hold{background:rgba(251,191,92,.16);color:var(--warn)}
+.ap-ev .badge.idle{background:rgba(148,163,184,.14);color:var(--slate)}
+.ap-ev .body{font-size:12.5px;color:var(--slate);line-height:1.55}
+.ap-ev .body b{color:var(--white)}
+.ap-ev .body .rat{color:var(--slate2);font-style:italic;margin-top:2px;font-size:11.5px}
+.ap-ev .body .mp{font-weight:700}
+.ap-ev .body .mp.good{color:var(--good)}.ap-ev .body .mp.thin{color:var(--warn)}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:rgba(34,211,238,.22);border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Freight<span>Normal</span></h1>
+        <p>Quote Normalization Console</p>
+      </div>
+    </div>
+    <div class="ai-badge"><span class="dot"></span>ENGINE <b id="engine">…</b></div>
+  </header>
+
+  <div class="hero">
+    <canvas id="lanes"></canvas>
+    <div class="hero-cap">
+      <div class="k">Live Lane Corpus</div>
+      <div class="v"><b id="laneCount">0</b> lanes &middot; <b id="qCount">0</b> normalized quotes</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="normalize">Normalize</div>
+    <div class="tab" data-t="compare">Compare &amp; Margin</div>
+    <div class="tab" data-t="bookings">Bookings</div>
+    <div class="tab" data-t="intel">Lane Intelligence</div>
+    <div class="tab" data-t="pricing">Pricing</div>
+    <div class="tab" data-t="ambient">Ambient 2036</div>
+  </div>
+
+  <!-- NORMALIZE -->
+  <section id="tab-normalize" class="grid">
+    <div class="panel">
+      <h2>Paste a messy quote</h2>
+      <div class="presets" id="presets"></div>
+      <label class="fld">Raw carrier quote text</label>
+      <textarea id="quoteText" placeholder="Paste an email quote, or pick a sample above…"></textarea>
+      <div class="row mt">
+        <button class="btn" id="normBtn" style="flex:2">Normalize →</button>
+        <button class="btn ghost" id="addBtn" style="flex:1.3" disabled>+ Add to Compare</button>
+      </div>
+      <div class="small mt">Every normalized quote is persisted — the market corpus compounds.</div>
+    </div>
+    <div class="panel">
+      <h2>Normalized schema <span class="side" id="normSide"></span></h2>
+      <div id="normOut"><div class="empty">Normalize a quote to see the clean, comparable schema:<br>linehaul &middot; fuel &middot; accessorials &middot; total &middot; $/mile.</div></div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section id="tab-compare" class="hide">
+    <div class="panel">
+      <h2>Ranked comparison <span class="side" id="cmpSide">0 quotes</span></h2>
+      <div id="cmpTable"><div class="empty">Normalize quotes and hit <b>+ Add to Compare</b> to rank them head-to-head by total and $/mile.</div></div>
+      <div id="cmpTools" class="hide">
+        <div class="calc">
+          <div>
+            <label class="fld">Your sell / linehaul rate to shipper ($)</label>
+            <input id="sell" type="number" value="2000" step="10"/>
+          </div>
+          <div>
+            <label class="fld">Cost basis</label>
+            <select id="basis">
+              <option value="best">Best total (cheapest carrier)</option>
+              <option value="bestpm">Best $/mile carrier</option>
+              <option value="avg">Average of compared</option>
+            </select>
+          </div>
+          <div class="out">
+            <div class="cell"><div class="k">Cost</div><div class="v" id="mCost">—</div></div>
+            <div class="cell"><div class="k">Margin $</div><div class="v" id="mAbs" style="color:var(--good)">—</div></div>
+            <div class="cell"><div class="k">Margin %</div><div class="v" id="mPct" style="color:var(--cyan)">—</div></div>
+          </div>
+        </div>
+        <div class="row mt">
+          <button class="btn" id="bookBtn" style="flex:2">Book winning carrier &rarr;</button>
+          <button class="btn ghost" id="clearCmp" style="flex:1.3">Clear comparison</button>
+        </div>
+        <div id="bookOut"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOOKINGS -->
+  <section id="tab-bookings" class="hide">
+    <div class="panel" style="margin-bottom:20px">
+      <h2>Autopilot <span class="side" id="apSide">idle</span></h2>
+      <div class="ap-bar">
+        <div class="ap-toggle" id="apToggle" role="switch" aria-checked="false">
+          <div class="ap-knob"></div>
+        </div>
+        <div class="ap-label">
+          <div class="ap-title">AUTOPILOT <b id="apStatus">OFF</b></div>
+          <div class="small">Auto-books the cheapest carrier hands-free when margin &ge; 12%. Steps every ~4s.</div>
+        </div>
+        <div class="ap-stats">
+          <div class="ap-stat"><div class="k">Booked</div><div class="v" id="apBooked" style="color:var(--good)">0</div></div>
+          <div class="ap-stat"><div class="k">Held</div><div class="v" id="apHeld" style="color:var(--warn)">0</div></div>
+          <div class="ap-stat"><div class="k">Queue</div><div class="v" id="apQueue" style="color:var(--cyan)">–</div></div>
+        </div>
+      </div>
+      <div id="apFeed" class="ap-feed"><div class="empty">Flip Autopilot ON to watch the agent evaluate the open-load queue and auto-book good-margin lanes in real time.</div></div>
+    </div>
+    <div class="panel">
+      <h2>Booked loads <span class="side" id="bkSide">0 loads</span></h2>
+      <div id="bkTable"><div class="empty">No loads booked yet. Add quotes to <b>Compare</b>, then <b>Book winning carrier</b> to tender a load.</div></div>
+    </div>
+  </section>
+
+  <!-- INTEL -->
+  <section id="tab-intel" class="grid">
+    <div class="panel">
+      <h2>Lane-rate intelligence <span class="side">corpus $/mile</span></h2>
+      <div id="intelTable"><div class="empty">Loading lane corpus…</div></div>
+    </div>
+    <div class="panel">
+      <h2>Lane watchlist <span class="side">saved lanes</span></h2>
+      <div class="row">
+        <div><label class="fld">Origin</label><input id="wOrigin" placeholder="Chicago, IL"/></div>
+        <div><label class="fld">Dest</label><input id="wDest" placeholder="Dallas, TX"/></div>
+      </div>
+      <button class="btn ghost mt" id="watchBtn" style="width:100%">+ Watch this lane</button>
+      <div id="watchList" class="mt"><div class="empty">Save a lane to track its corpus avg $/mile and last normalized quote.</div></div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="tab-pricing" class="grid">
+    <div class="panel">
+      <h2>Pricing</h2>
+      <div class="price">
+        <div class="big">$99<span> / mo</span></div>
+        <ul>
+          <li>Unlimited normalization on your saved lanes</li>
+          <li>500 quotes/mo included</li>
+          <li>Compounding lane-rate corpus &amp; market verdicts</li>
+          <li>Compare + margin calculator</li>
+        </ul>
+        <div class="slider">
+          <label class="fld">Quotes normalized this month: <b id="qLbl" style="color:var(--cyan)">500</b></label>
+          <input id="qRange" type="range" min="0" max="4000" value="500" step="50" style="width:100%"/>
+        </div>
+        <div class="overage">
+          <div><div class="k small">Overage (@ $0.12 / quote over 500)</div></div>
+          <div class="amt" id="overAmt">$0</div>
+        </div>
+        <div class="overage" style="border-color:rgba(34,211,238,.4)">
+          <div><b>Total monthly</b></div>
+          <div class="amt" id="totAmt">$99</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Why it's worth it</h2>
+      <div class="norm">
+        <div class="lane">One prevented <b>overpay</b> pays for the year.</div>
+        <div class="car">A single quote flagged "above market" and re-sourced typically saves $150–$400 per load. FreightNormal turns free-text chaos into an auditable, comparable schema — and the corpus makes every future verdict sharper.</div>
+      </div>
+      <div class="small mt">Base tier is fixed at $99/mo; overage bills only on quotes beyond the 500 included.</div>
+    </div>
+  </section>
+
+  <!-- AMBIENT -->
+  <section id="tab-ambient" class="grid">
+    <div class="panel">
+      <h2>Ambient mode &middot; 2036 <span class="side">autonomous lane booking</span></h2>
+      <label class="fld">Lane</label>
+      <select id="ambLane"></select>
+      <button class="btn mt" id="ambRun" style="width:100%">Run ambient booking →</button>
+      <div class="small mt">In 2036 the agent watches your lanes and books the winning carrier before you ask.</div>
+    </div>
+    <div class="panel">
+      <h2>Agent transcript</h2>
+      <div id="ambOut"><div class="empty">Pick a lane and run the ambient agent.</div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const money = n => "$" + (Number(n)||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const pm = n => "$" + (Number(n)||0).toFixed(3);
+
+const SAMPLES = [
+  {name:"Summit (email)", text:
+`Quote from: Summit Freightways
+Lane: Chicago, IL -> Dallas, TX  (925 mi)
+Line haul: $1,395
+Fuel surcharge: $298
+Detention (2 hrs): $120
+Grand total: $1,813`},
+  {name:"IronHaul (messy)", text:
+`IRONHAUL CARRIERS  quote ref #A-2201
+pickup: Los Angeles, CA   delivery: Phoenix, AZ
+distance 375 mi
+base rate ......... 690.00
+FSC ............... 128
+liftgate 25
+Total due: $843`},
+  {name:"Coastal (sloppy)", text:
+`carrier: Coastal Express
+Atlanta, GA to Miami, FL 665 miles
+flat rate 980
+fuel 205
+residential delivery $60  + inside delivery 30
+all-in 1275`},
+  {name:"Keystone (bare)", text:
+`Keystone Carriers
+Newark, NJ => Columbus, OH  545 mi
+line-haul 905, fuel sur 182, appointment fee 30`}
+];
+
+/* ---------- state ---------- */
+let compare = [];      // list of normalized quote objects
+let lastNorm = null;   // last normalized (for + Add)
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  ['normalize','compare','bookings','intel','pricing','ambient'].forEach(n=>
+    $('#tab-'+n).classList.toggle('hide', n!==t.dataset.t));
+  if(t.dataset.t==='intel'){ loadLanes(); loadWatchlist(); }
+  if(t.dataset.t==='bookings') loadBookings();
+});
+
+/* ---------- presets ---------- */
+const pc = $('#presets');
+SAMPLES.forEach(s=>{
+  const c=document.createElement('div'); c.className='chip'; c.textContent=s.name;
+  c.onclick=()=>{ $('#quoteText').value=s.text; };
+  pc.appendChild(c);
+});
+
+/* ---------- health ---------- */
+fetch('/api/health').then(r=>r.json()).then(h=>{
+  $('#engine').textContent = h.engine==='claude' ? ('claude · '+(h.model||'')) : 'mock (offline)';
+}).catch(()=>{ $('#engine').textContent='offline'; });
+
+/* ---------- normalize ---------- */
+$('#normBtn').onclick = async ()=>{
+  const text = $('#quoteText').value.trim();
+  if(!text){ $('#normOut').innerHTML='<div class="empty">Paste a quote first (or pick a sample).</div>'; return; }
+  $('#normBtn').disabled=true; $('#normBtn').textContent='Normalizing…';
+  try{
+    const r = await fetch('/api/normalize',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({text, save:true})});
+    const d = await r.json();
+    if(!r.ok){ $('#normOut').innerHTML='<div class="empty">'+(d.error||'parse failed')+'</div>'; return; }
+    lastNorm = d.normalized;
+    renderNorm(d.normalized, d.market);
+    $('#addBtn').disabled=false;
+    drawLanes();  // corpus grew
+  }catch(e){ $('#normOut').innerHTML='<div class="empty">request failed</div>'; }
+  finally{ $('#normBtn').disabled=false; $('#normBtn').textContent='Normalize →'; }
+};
+
+function renderNorm(n, m){
+  $('#normSide').textContent = (n.miles?n.miles+' mi':'') ;
+  const accItems = Array.isArray(n.accessorial_items)&&n.accessorial_items.length
+    ? '<div class="acc"><div class="k small" style="margin-bottom:4px">Accessorials itemized</div>'+
+      n.accessorial_items.map(a=>'<div class="it"><span>'+esc(a.label)+'</span><span>'+money(a.amount)+'</span></div>').join('')+
+      '</div>' : '';
+  const vcls = m.verdict==='below market'?'below':m.verdict==='above market'?'above':m.verdict==='at market'?'at':'no';
+  $('#normOut').innerHTML =
+    '<div class="norm">'+
+      '<div class="lane"><b>'+esc(n.origin)+'</b> → <b>'+esc(n.dest)+'</b></div>'+
+      '<div class="car">'+esc(n.carrier)+(n.miles?' · '+n.miles+' mi':'')+'</div>'+
+      '<div class="br">'+
+        cell('Linehaul',money(n.linehaul))+
+        cell('Fuel',money(n.fuel))+
+        cell('Accessorials',money(n.accessorials))+
+        cell('Total',money(n.total),'total')+
+        cell('$ / mile',pm(n.per_mile),'pm')+
+        cell('Carrier',esc(n.carrier))+
+      '</div>'+
+      accItems+
+      '<div class="verdict"><span class="pill '+vcls+'">'+esc(m.verdict)+'</span>'+
+        '<span>vs '+esc(m.scope)+' avg '+pm(m.market_per_mile)+'/mi · '+
+        (m.delta_pct>0?'+':'')+m.delta_pct+'%</span></div>'+
+      '<div class="eng">engine: '+esc(n._engine||'')+'</div>'+
+    '</div>';
+}
+function cell(k,v,cls){return '<div class="cell '+(cls||'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---------- compare ---------- */
+$('#addBtn').onclick = ()=>{
+  if(!lastNorm) return;
+  compare.push(lastNorm);
+  renderCompare();
+  document.querySelector('.tab[data-t="compare"]').click();
+};
+$('#clearCmp')?.addEventListener('click',()=>{ compare=[]; renderCompare(); });
+
+function renderCompare(){
+  $('#cmpSide').textContent = compare.length+' quote'+(compare.length===1?'':'s');
+  if(!compare.length){
+    $('#cmpTable').innerHTML='<div class="empty">Normalize quotes and hit <b>+ Add to Compare</b> to rank them head-to-head by total and $/mile.</div>';
+    $('#cmpTools').classList.add('hide'); return;
+  }
+  $('#cmpTools').classList.remove('hide');
+  const ranked = compare.slice().sort((a,b)=>a.total-b.total);
+  const bestTotal = Math.min(...compare.map(q=>q.total));
+  const bestPM = Math.min(...compare.map(q=>q.per_mile||Infinity));
+  let rows = ranked.map((q,i)=>{
+    const wT = q.total===bestTotal, wP = (q.per_mile||Infinity)===bestPM;
+    return '<tr class="'+(wT?'best':'')+'">'+
+      '<td><span class="rank '+(i===0?'win':'')+'">'+(i+1)+'</span></td>'+
+      '<td>'+esc(q.carrier)+'<div class="small">'+esc(q.origin)+' → '+esc(q.dest)+'</div></td>'+
+      '<td class="mono">'+money(q.linehaul)+'</td>'+
+      '<td class="mono">'+money(q.fuel)+'</td>'+
+      '<td class="mono">'+money(q.accessorials)+'</td>'+
+      '<td class="mono">'+money(q.total)+(wT?'<span class="tag">best total</span>':'')+'</td>'+
+      '<td class="mono">'+pm(q.per_mile)+(wP?'<span class="tag">best $/mi</span>':'')+'</td>'+
+      '</tr>';
+  }).join('');
+  $('#cmpTable').innerHTML='<table><thead><tr><th></th><th>Carrier / lane</th><th>Linehaul</th><th>Fuel</th><th>Accessorials</th><th>Total</th><th>$/mile</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  calcMargin();
+}
+function calcMargin(){
+  if(!compare.length) return;
+  const sell = Number($('#sell').value)||0;
+  const basis = $('#basis').value;
+  let cost;
+  if(basis==='best') cost = Math.min(...compare.map(q=>q.total));
+  else if(basis==='avg') cost = compare.reduce((s,q)=>s+q.total,0)/compare.length;
+  else { // bestpm: total of the carrier with lowest per-mile
+    const bp = compare.slice().sort((a,b)=>(a.per_mile||1e9)-(b.per_mile||1e9))[0];
+    cost = bp.total;
+  }
+  const abs = sell - cost;
+  const pct = sell>0 ? (abs/sell*100) : 0;
+  $('#mCost').textContent = money(cost);
+  $('#mAbs').textContent = money(abs);
+  $('#mAbs').style.color = abs>=0?'var(--good)':'var(--danger)';
+  $('#mPct').textContent = pct.toFixed(1)+'%';
+}
+$('#sell').oninput = calcMargin;
+$('#basis').onchange = calcMargin;
+
+/* ---------- lanes intel + hero ---------- */
+let LANES = [];
+function loadLanes(){
+  return fetch('/api/lanes').then(r=>r.json()).then(d=>{
+    LANES = d.lanes||[];
+    renderIntel(); populateAmbLanes(); drawLanes();
+  }).catch(()=>{});
+}
+function renderIntel(){
+  const t = $('#intelTable'); if(!t) return;
+  if(!LANES.length){ t.innerHTML='<div class="empty">No lanes in corpus yet.</div>'; return; }
+  const rows = LANES.map(l=>
+    '<tr><td>'+esc(l.lane)+'</td>'+
+    '<td class="mono">'+l.n+'</td>'+
+    '<td class="mono">'+l.miles+' mi</td>'+
+    '<td class="mono" style="color:var(--cyan);font-weight:700">'+pm(l.avg_per_mile)+'</td>'+
+    '<td class="mono">'+money(l.min_total)+'</td>'+
+    '<td class="mono">'+money(l.avg_total)+'</td>'+
+    '<td class="mono">'+money(l.max_total)+'</td></tr>').join('');
+  t.innerHTML='<table><thead><tr><th>Lane</th><th>Quotes</th><th>Dist</th><th>Avg $/mi</th><th>Min total</th><th>Avg total</th><th>Max total</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function populateAmbLanes(){
+  const s=$('#ambLane'); if(!s) return; s.innerHTML='';
+  LANES.forEach(l=>{ const o=document.createElement('option'); o.value=l.origin+'|'+l.dest; o.textContent=l.lane; s.appendChild(o); });
+}
+$('#qLbl'); // stats
+function refreshStats(){
+  $('#laneCount').textContent = LANES.length;
+  $('#qCount').textContent = LANES.reduce((s,l)=>s+l.n,0);
+}
+
+/* ---------- hero canvas: origin→dest arcs ---------- */
+const cv = $('#lanes'), ctx = cv.getContext('2d');
+let pts = [], t0 = performance.now();
+function sizeCanvas(){
+  const r = cv.getBoundingClientRect();
+  cv.width = r.width*devicePixelRatio; cv.height = r.height*devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+function drawLanes(){
+  refreshStats();
+  sizeCanvas();
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const n = Math.max(LANES.length,1);
+  pts = LANES.map((l,i)=>{
+    const y = 40 + (h-80)*(i+0.5)/n;
+    return {
+      o:{x:70,y}, d:{x:w-70,y:y+(i%2?-14:14)},
+      label:l.lane, apm:l.avg_per_mile, n:l.n
+    };
+  });
+}
+function frame(now){
+  const w = cv.clientWidth, h = cv.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  // faint grid
+  ctx.strokeStyle='rgba(34,211,238,.05)'; ctx.lineWidth=1;
+  for(let x=0;x<w;x+=44){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  const phase = (now-t0)/2400;
+  pts.forEach((p,i)=>{
+    const mx=(p.o.x+p.d.x)/2, my=(p.o.y+p.d.y)/2 - 46;
+    // arc
+    const g = ctx.createLinearGradient(p.o.x,0,p.d.x,0);
+    g.addColorStop(0,'rgba(34,211,238,.15)'); g.addColorStop(.5,'rgba(34,211,238,.75)'); g.addColorStop(1,'rgba(34,211,238,.15)');
+    ctx.strokeStyle=g; ctx.lineWidth=1.6; ctx.beginPath();
+    ctx.moveTo(p.o.x,p.o.y); ctx.quadraticCurveTo(mx,my,p.d.x,p.d.y); ctx.stroke();
+    // travelling pulse
+    const tt = ((phase + i*0.17)%1);
+    const bx = quad(p.o.x,mx,p.d.x,tt), by = quad(p.o.y,my,p.d.y,tt);
+    ctx.fillStyle='rgba(34,211,238,1)'; ctx.shadowColor='rgba(34,211,238,.9)'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(bx,by,3.4,0,7); ctx.fill(); ctx.shadowBlur=0;
+    // endpoints
+    node(p.o.x,p.o.y); node(p.d.x,p.d.y);
+    // label
+    ctx.fillStyle='rgba(138,160,189,.9)'; ctx.font='11px ui-sans-serif,system-ui';
+    ctx.fillText(p.label, p.o.x+8, p.o.y-8);
+    ctx.fillStyle='rgba(34,211,238,.9)'; ctx.font='10px ui-monospace,monospace';
+    ctx.fillText('$'+p.apm.toFixed(2)+'/mi', p.d.x-64, p.d.y-8);
+  });
+  requestAnimationFrame(frame);
+}
+function node(x,y){ ctx.fillStyle='#0b1220'; ctx.strokeStyle='rgba(34,211,238,.9)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(x,y,4.5,0,7); ctx.fill(); ctx.stroke(); }
+function quad(a,b,c,t){ const u=1-t; return u*u*a + 2*u*t*b + t*t*c; }
+window.addEventListener('resize',()=>drawLanes());
+requestAnimationFrame(frame);
+
+/* ---------- pricing widget ---------- */
+$('#qRange').oninput = e=>{
+  const q = +e.target.value;
+  $('#qLbl').textContent = q;
+  const over = Math.max(0, q-500);
+  const overCost = over*0.12;
+  $('#overAmt').textContent = money(overCost);
+  $('#totAmt').textContent = money(99+overCost);
+};
+
+/* ---------- ambient ---------- */
+$('#ambRun').onclick = async ()=>{
+  const v = $('#ambLane').value; if(!v){ return; }
+  const [origin,dest] = v.split('|');
+  $('#ambOut').innerHTML='<div class="empty">Agent scanning lane…</div>';
+  try{
+    const r = await fetch('/api/ambient?origin='+encodeURIComponent(origin)+'&dest='+encodeURIComponent(dest));
+    const d = await r.json();
+    renderAmbient(d);
+  }catch(e){ $('#ambOut').innerHTML='<div class="empty">request failed</div>'; }
+};
+function renderAmbient(d){
+  if(!d.carriers || !d.carriers.length){ $('#ambOut').innerHTML='<div class="empty">No corpus data for this lane.</div>'; return; }
+  const b = d.booked;
+  const steps = [
+    ['Monitoring lane <b>'+esc(d.lane)+'</b> across '+d.carriers.length+' known carriers.'],
+    ['Pulled live totals; cheapest is <b>'+esc(b.carrier)+'</b> at <b>'+money(b.total)+'</b> ('+pm(b.per_mile)+'/mi).'],
+    ['Cross-checked against your margin floor — passes.'],
+    ['Auto-booked <b>'+esc(b.carrier)+'</b> and issued the rate confirmation. No human touch.']
+  ];
+  const list = steps.map((s,i)=>'<div class="amb-step"><div class="n">'+(i+1)+'</div><div class="txt">'+s[0]+'</div></div>').join('');
+  const carriers = d.carriers.map(c=>'<div class="amb-step"><div class="n" style="'+(c.carrier===b.carrier?'':'background:rgba(148,163,184,.14);color:var(--slate);box-shadow:none')+'">'+(c.carrier===b.carrier?'✓':'·')+'</div><div class="txt"><b>'+esc(c.carrier)+'</b> · '+money(c.total)+' · '+pm(c.per_mile)+'/mi</div></div>').join('');
+  $('#ambOut').innerHTML = list +
+    '<div class="amb-save"><div class="k small">Saved vs. worst carrier on lane</div><div class="v">'+money(d.savings_vs_worst||0)+'</div></div>'+
+    '<div class="k small" style="margin:16px 0 4px;letter-spacing:1.4px;text-transform:uppercase;color:var(--slate2)">Carriers evaluated</div>'+carriers;
+}
+
+/* ---------- book & tender ---------- */
+$('#bookBtn')?.addEventListener('click', async ()=>{
+  if(!compare.length) return;
+  // winning carrier = cheapest total
+  const winner = compare.slice().sort((a,b)=>a.total-b.total)[0];
+  const sell = Number($('#sell').value)||0;
+  $('#bookBtn').disabled=true; $('#bookBtn').textContent='Booking…';
+  try{
+    const r = await fetch('/api/book',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({quote:winner, sell})});
+    const d = await r.json();
+    if(!r.ok){ $('#bookOut').innerHTML='<div class="empty">'+(d.error||'booking failed')+'</div>'; return; }
+    const b = d.booking;
+    $('#bookOut').innerHTML =
+      '<div class="norm mt">'+
+        '<div class="lane">Load <b>'+esc(b.load_number)+'</b> · <span class="pill at">'+esc(b.status)+'</span></div>'+
+        '<div class="car">'+esc(b.carrier)+' · '+esc(b.origin)+' → '+esc(b.dest)+' · '+money(b.total)+
+          (b.margin?(' · margin '+money(b.margin)+' ('+b.margin_pct+'%)'):'')+'</div>'+
+        '<div class="mt"><a class="btn ghost" href="'+b.rate_con_url+'" target="_blank" style="display:inline-block;text-decoration:none">Download rate con →</a></div>'+
+      '</div>';
+    loadBookings();
+  }catch(e){ $('#bookOut').innerHTML='<div class="empty">request failed</div>'; }
+  finally{ $('#bookBtn').disabled=false; $('#bookBtn').textContent='Book winning carrier →'; }
+});
+
+function loadBookings(){
+  return fetch('/api/bookings').then(r=>r.json()).then(d=>{
+    const bk = d.bookings||[];
+    $('#bkSide').textContent = bk.length+' load'+(bk.length===1?'':'s');
+    const t=$('#bkTable'); if(!t) return;
+    if(!bk.length){ t.innerHTML='<div class="empty">No loads booked yet. Add quotes to <b>Compare</b>, then <b>Book winning carrier</b> to tender a load.</div>'; return; }
+    const rows = bk.map(b=>
+      '<tr><td class="mono"><a href="'+b.rate_con_url+'" target="_blank">'+esc(b.load_number)+'</a></td>'+
+      '<td><span class="pill at" style="font-size:10px">'+esc(b.status)+'</span></td>'+
+      '<td>'+esc(b.carrier)+'<div class="small">'+esc(b.origin)+' → '+esc(b.dest)+'</div></td>'+
+      '<td class="mono">'+money(b.total)+'</td>'+
+      '<td class="mono">'+pm(b.per_mile)+'</td>'+
+      '<td class="mono" style="color:var(--good)">'+(b.margin?money(b.margin):'—')+'</td>'+
+      '<td class="mono"><a href="'+b.rate_con_url+'" target="_blank">rate con →</a></td></tr>').join('');
+    t.innerHTML='<table><thead><tr><th>Load #</th><th>Status</th><th>Carrier / lane</th><th>Total</th><th>$/mi</th><th>Margin</th><th>Tender</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }).catch(()=>{});
+}
+
+/* ---------- watchlist ---------- */
+$('#watchBtn')?.addEventListener('click', async ()=>{
+  const origin=$('#wOrigin').value.trim(), dest=$('#wDest').value.trim();
+  if(!origin||!dest){ return; }
+  try{
+    const r = await fetch('/api/watch',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({origin,dest})});
+    const d = await r.json();
+    if(r.ok){ $('#wOrigin').value=''; $('#wDest').value=''; renderWatchlist(d.watchlist||[]); }
+  }catch(e){}
+});
+function loadWatchlist(){
+  return fetch('/api/watchlist').then(r=>r.json()).then(d=>renderWatchlist(d.watchlist||[])).catch(()=>{});
+}
+function renderWatchlist(wl){
+  const t=$('#watchList'); if(!t) return;
+  if(!wl.length){ t.innerHTML='<div class="empty">Save a lane to track its corpus avg $/mile and last normalized quote.</div>'; return; }
+  t.innerHTML = wl.map(w=>
+    '<div class="norm" style="margin-top:10px">'+
+      '<div class="lane"><b>'+esc(w.origin)+'</b> → <b>'+esc(w.dest)+'</b></div>'+
+      '<div class="car">'+w.n+' quote'+(w.n===1?'':'s')+' in corpus · avg <b style="color:var(--cyan)">'+pm(w.avg_per_mile)+'/mi</b> · avg '+money(w.avg_total)+'</div>'+
+      (w.last_quote
+        ? '<div class="small mt">Last quote: '+esc(w.last_quote.carrier)+' · '+money(w.last_quote.total)+' · '+pm(w.last_quote.per_mile)+'/mi</div>'
+        : '<div class="small mt">No normalized quotes on this lane yet.</div>')+
+    '</div>').join('');
+}
+
+/* ---------- autopilot ---------- */
+let apOn = false, apTimer = null, apBusy = false;
+
+function applyApState(s){
+  if(!s) return;
+  $('#apBooked').textContent = s.booked_count;
+  $('#apHeld').textContent = s.held_count;
+  $('#apQueue').textContent = s.queue_remaining;
+  $('#apSide').textContent = apOn
+    ? (s.queue_remaining>0 ? 'running · '+s.queue_remaining+' in queue' : 'queue clear')
+    : 'idle';
+}
+
+function apEvent(ev){
+  const feed = $('#apFeed');
+  if(feed.querySelector('.empty')) feed.innerHTML='';
+  if(ev.action==='idle'){
+    feed.insertAdjacentHTML('afterbegin',
+      '<div class="ap-ev"><div class="badge idle">∅</div><div class="body">Queue empty — no open loads remaining. Autopilot standing by.</div></div>');
+    return;
+  }
+  const booked = ev.action==='booked';
+  const badge = booked ? '<div class="badge book">✓</div>' : '<div class="badge hold">⏸</div>';
+  const mpCls = booked ? 'good' : 'thin';
+  let head = booked
+    ? '<b>'+esc(ev.lane)+'</b> → booked <b>'+esc(ev.carrier)+'</b> @ '+money(ev.rate)+
+      ' · <span class="mp '+mpCls+'">'+ev.margin_pct+'% margin</span>'
+    : '<b>'+esc(ev.lane)+'</b> → HELD'+(ev.carrier?' · best '+esc(ev.carrier)+' @ '+money(ev.rate):'')+
+      ' · <span class="mp '+mpCls+'">'+ev.margin_pct+'% margin</span>';
+  let tail = booked && ev.load_number
+    ? '<div class="small" style="margin-top:3px">Load <b style="color:var(--cyan)">'+esc(ev.load_number)+
+      '</b> · <a href="'+esc(ev.rate_con_url||'#')+'" target="_blank">rate con →</a></div>'
+    : '';
+  const rat = ev.rationale ? '<div class="rat">'+esc(ev.rationale)+'</div>' : '';
+  feed.insertAdjacentHTML('afterbegin',
+    '<div class="ap-ev">'+badge+'<div class="body">'+head+rat+tail+'</div></div>');
+}
+
+async function apStep(){
+  if(apBusy) return;
+  apBusy = true;
+  try{
+    const r = await fetch('/api/autopilot/step',{method:'POST'});
+    const d = await r.json();
+    apEvent(d.event);
+    applyApState(d.state);
+    loadBookings();
+    if(d.state && d.state.queue_remaining===0){ /* keep toggle on but nothing left */ }
+  }catch(e){ /* ignore transient */ }
+  finally{ apBusy=false; }
+}
+
+function setAutopilot(on){
+  apOn = on;
+  const tg = $('#apToggle');
+  tg.classList.toggle('on', on);
+  tg.setAttribute('aria-checked', on?'true':'false');
+  $('#apStatus').textContent = on?'ON':'OFF';
+  if(on){
+    apStep();                       // fire immediately
+    apTimer = setInterval(apStep, 4000);
+  } else {
+    clearInterval(apTimer); apTimer=null;
+    fetch('/api/autopilot/state').then(r=>r.json()).then(applyApState).catch(()=>{});
+  }
+}
+$('#apToggle').onclick = ()=> setAutopilot(!apOn);
+
+/* ---------- boot ---------- */
+loadLanes();
+fetch('/api/autopilot/state').then(r=>r.json()).then(applyApState).catch(()=>{});
+</script>
+</body>
+</html>

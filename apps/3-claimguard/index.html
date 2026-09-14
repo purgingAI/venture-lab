@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ClaimGuard — Denial Radar</title>
+<style>
+:root{
+  --teal:#2dd4bf; --teal-dim:#14b8a6; --teal-glow:rgba(45,212,191,.35);
+  --bg:#05090f; --bg2:#0a1119; --panel:rgba(17,26,38,.72); --panel-solid:#0f1722;
+  --line:rgba(45,212,191,.16); --slate:#93a4b8; --slate2:#5f7286;
+  --white:#eef4f8; --danger:#f97066; --warn:#fbbf5c; --good:#34d399;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'SF Mono',ui-monospace,'Segoe UI',system-ui,sans-serif;
+  background:
+    radial-gradient(1100px 600px at 82% -8%,rgba(45,212,191,.10),transparent 60%),
+    radial-gradient(900px 500px at 8% 108%,rgba(45,212,191,.07),transparent 60%),
+    var(--bg);
+  color:var(--white); min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--teal);text-decoration:none}
+.wrap{max-width:1300px;margin:0 auto;padding:26px 26px 70px}
+header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{
+  width:44px;height:44px;border-radius:12px;position:relative;
+  background:linear-gradient(145deg,#0c1a20,#06111a);
+  border:1px solid var(--line);box-shadow:0 0 24px var(--teal-glow) inset,0 0 0 1px rgba(45,212,191,.1);
+  display:grid;place-items:center;
+}
+.logo::before{content:"";width:20px;height:20px;border-radius:6px;
+  background:conic-gradient(from 210deg,var(--teal),#0ea5a0,var(--teal));
+  filter:drop-shadow(0 0 8px var(--teal-glow));}
+.brand h1{font-size:19px;letter-spacing:.5px;margin:0;font-weight:700}
+.brand h1 span{color:var(--teal)}
+.brand p{margin:2px 0 0;font-size:11.5px;color:var(--slate2);letter-spacing:2px;text-transform:uppercase}
+.ai-badge{font-size:11px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);
+  color:var(--teal);background:rgba(45,212,191,.06);letter-spacing:.5px;white-space:nowrap}
+.ai-badge b{color:#fff}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--teal);display:inline-block;margin-right:7px;
+  box-shadow:0 0 8px var(--teal);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.grid{display:grid;grid-template-columns:1.05fr 1.35fr;gap:20px;align-items:start}
+@media(max-width:980px){.grid{grid-template-columns:1fr}}
+.panel{
+  background:var(--panel);backdrop-filter:blur(12px);
+  border:1px solid var(--line);border-radius:16px;padding:20px;
+  box-shadow:0 10px 40px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.02) inset;
+}
+.panel h2{font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--slate);
+  margin:0 0 16px;display:flex;align-items:center;gap:9px;font-weight:600}
+.panel h2::before{content:"";width:6px;height:16px;border-radius:3px;background:var(--teal);
+  box-shadow:0 0 10px var(--teal-glow)}
+
+/* stat strip */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+.stat .k{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--slate2)}
+.stat .v{font-size:25px;font-weight:700;margin-top:6px;letter-spacing:.5px}
+.stat.protect .v{color:var(--teal);text-shadow:0 0 18px var(--teal-glow)}
+.stat.risk .v{color:var(--warn)}
+.stat::after{content:"";position:absolute;right:-30px;bottom:-30px;width:80px;height:80px;border-radius:50%;
+  background:radial-gradient(circle,var(--teal-glow),transparent 70%);opacity:.5}
+
+/* form */
+label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--slate2);margin:0 0 5px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.row.tri{grid-template-columns:1fr 1fr 1fr}
+input,select{
+  width:100%;background:#070d14;border:1px solid rgba(45,212,191,.2);color:var(--white);
+  padding:10px 12px;border-radius:10px;font-family:inherit;font-size:13.5px;outline:none;transition:.15s;
+}
+input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+.checkline{display:flex;align-items:center;gap:8px;margin:2px 0 14px;color:var(--slate);font-size:12.5px}
+.checkline input{width:auto}
+.btn{
+  width:100%;padding:13px;border:none;border-radius:11px;cursor:pointer;font-family:inherit;
+  font-weight:700;font-size:13.5px;letter-spacing:1px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--teal),var(--teal-dim));color:#03110f;
+  box-shadow:0 6px 22px var(--teal-glow);transition:.15s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 10px 30px var(--teal-glow)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent;color:var(--teal);border:1px solid var(--line);box-shadow:none}
+
+/* scanner */
+.scanbox{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);min-height:220px;
+  background:linear-gradient(180deg,#070f16,#050a10);display:flex;align-items:center;justify-content:center}
+.scanline{position:absolute;left:0;right:0;height:2px;top:0;
+  background:linear-gradient(90deg,transparent,var(--teal),transparent);
+  box-shadow:0 0 18px 3px var(--teal-glow);opacity:0}
+.scanning .scanline{animation:scan 1.15s cubic-bezier(.4,0,.2,1) infinite;opacity:1}
+@keyframes scan{0%{top:4%}100%{top:96%}}
+.scan-grid{position:absolute;inset:0;background-image:
+  linear-gradient(rgba(45,212,191,.05) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(45,212,191,.05) 1px,transparent 1px);
+  background-size:26px 26px;opacity:.6}
+.scan-msg{position:relative;text-align:center;z-index:2}
+.scan-msg .big{font-size:15px;color:var(--slate);letter-spacing:1px}
+
+/* gauge */
+.gauge{position:relative;width:150px;height:150px;margin:2px auto 8px}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .lab{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.gauge .num{font-size:38px;font-weight:800;line-height:1}
+.gauge .cap{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--slate2);margin-top:4px}
+
+/* flags */
+.flag{border:1px solid var(--line);border-left:3px solid var(--danger);border-radius:12px;padding:13px 15px;margin-bottom:11px;
+  background:rgba(249,112,102,.05)}
+.flag .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.flag .name{font-weight:700;font-size:13.5px}
+.flag .amt{color:var(--danger);font-weight:700;font-size:13px;white-space:nowrap}
+.flag .detail{font-size:11.5px;color:var(--slate2);margin-bottom:8px}
+.flag .fix{font-size:13px;color:var(--white);line-height:1.5;background:rgba(45,212,191,.06);
+  border-radius:9px;padding:9px 11px;border:1px solid var(--line)}
+.flag .fix b{color:var(--teal)}
+.clean-msg{text-align:center;padding:18px;color:var(--good)}
+.clean-msg .big{font-size:16px;font-weight:700}
+
+/* dashboard table */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--slate2);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600}
+td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(45,212,191,.03)}
+.pill{font-size:10.5px;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.pill.Clean{background:rgba(52,211,153,.14);color:var(--good)}
+.pill.At-Risk{background:rgba(251,191,92,.14);color:var(--warn)}
+.pill.Fixed{background:rgba(45,212,191,.14);color:var(--teal)}
+.mini-btn{font-size:10.5px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);
+  background:transparent;color:var(--teal);cursor:pointer;font-family:inherit;letter-spacing:.5px}
+.mini-btn:hover{background:rgba(45,212,191,.1)}
+
+/* intelligence bars */
+.rule{margin-bottom:13px}
+.rule .rtop{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.rule .rname{color:var(--white)}
+.rule .rhits{color:var(--slate2);font-size:11px}
+.bar{height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
+.bar span{display:block;height:100%;border-radius:6px;
+  background:linear-gradient(90deg,var(--teal-dim),var(--teal));box-shadow:0 0 12px var(--teal-glow)}
+
+/* pricing widget */
+.price-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center}
+@media(max-width:640px){.price-grid{grid-template-columns:1fr}}
+.slider{width:100%}
+.big-num{font-size:34px;font-weight:800;color:var(--teal);text-shadow:0 0 20px var(--teal-glow)}
+.sub{font-size:11px;color:var(--slate2);letter-spacing:1px;text-transform:uppercase}
+input[type=range]{accent-color:var(--teal)}
+
+/* ambient */
+.amb-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.tag2036{font-size:10px;letter-spacing:2px;padding:4px 10px;border-radius:20px;
+  border:1px solid var(--teal);color:var(--teal);background:rgba(45,212,191,.06)}
+.step{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05);opacity:.25;
+  transform:translateX(-6px);transition:.4s}
+.step.on{opacity:1;transform:none}
+.step .ic{width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;
+  background:rgba(45,212,191,.1);border:1px solid var(--line);color:var(--teal);font-size:13px}
+.step .st{font-weight:700;font-size:13px}
+.step .sd{font-size:11.5px;color:var(--slate2);margin-top:2px;line-height:1.4}
+.full{grid-column:1/-1}
+.footnote{margin-top:26px;text-align:center;color:var(--slate2);font-size:11px;letter-spacing:.5px}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(45,212,191,.3);border-top-color:var(--teal);
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* autopilot */
+.ap-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.ap-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.safe-badge{font-size:10px;letter-spacing:1.5px;padding:5px 11px;border-radius:20px;font-weight:700;
+  border:1px solid var(--teal);color:var(--teal);background:rgba(45,212,191,.06);white-space:nowrap}
+.switch{position:relative;display:inline-block;width:52px;height:28px;cursor:pointer}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch .track{position:absolute;inset:0;border-radius:20px;background:rgba(255,255,255,.08);
+  border:1px solid var(--line);transition:.2s}
+.switch .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:var(--slate2);transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.switch input:checked+.track{background:rgba(45,212,191,.22);border-color:var(--teal);
+  box-shadow:0 0 14px var(--teal-glow) inset}
+.switch input:checked+.track .knob{left:27px;background:var(--teal);box-shadow:0 0 10px var(--teal-glow)}
+.ap-state{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--slate2);font-weight:700}
+.ap-state.on{color:var(--teal);text-shadow:0 0 12px var(--teal-glow)}
+.ap-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0 0 18px}
+@media(max-width:640px){.ap-stats{grid-template-columns:repeat(2,1fr)}}
+.ap-feed{border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#070f16,#050a10);
+  padding:8px 8px;max-height:340px;overflow-y:auto}
+.ap-empty{text-align:center;color:var(--slate2);font-size:12px;padding:26px 12px;letter-spacing:.5px}
+.ap-row{display:flex;align-items:flex-start;gap:12px;padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.05);
+  animation:apin .35s ease}
+.ap-row:last-child{border-bottom:none}
+@keyframes apin{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.ap-ic{width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;font-size:13px;
+  border:1px solid var(--line)}
+.ap-ic.corrected{background:rgba(45,212,191,.12);color:var(--teal)}
+.ap-ic.queued{background:rgba(251,191,92,.12);color:var(--warn)}
+.ap-body{flex:1;min-width:0}
+.ap-title{font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ap-title .rec{color:var(--teal);white-space:nowrap}
+.ap-title .qd{color:var(--warn);font-size:11px;letter-spacing:.5px;white-space:nowrap}
+.ap-sub{font-size:11.5px;color:var(--slate2);margin-top:3px;line-height:1.45}
+.ap-ts{font-size:10px;color:var(--slate2);letter-spacing:.5px;margin-top:3px;opacity:.75}
+
+/* tabs */
+.tabs{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+.tab{padding:10px 20px;border-radius:11px;border:1px solid var(--line);background:rgba(17,26,38,.5);
+  color:var(--slate);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;transition:.15s}
+.tab:hover{color:var(--white);border-color:var(--teal)}
+.tab.active{background:linear-gradient(135deg,rgba(45,212,191,.16),rgba(45,212,191,.05));
+  color:var(--teal);border-color:var(--teal);box-shadow:0 0 18px var(--teal-glow) inset}
+.view{display:none}
+.view.active{display:block;animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* batch */
+textarea{width:100%;background:#070d14;border:1px solid rgba(45,212,191,.2);color:var(--white);
+  padding:12px;border-radius:10px;font-family:'SF Mono',ui-monospace,monospace;font-size:12px;
+  outline:none;resize:vertical;min-height:150px;line-height:1.6;transition:.15s}
+textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(45,212,191,.12)}
+.btn.inline{width:auto;padding:11px 20px;display:inline-block}
+.agg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+@media(max-width:640px){.agg{grid-template-columns:repeat(2,1fr)}}
+.risk-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:1px}
+
+/* chart canvases */
+.chartwrap{background:linear-gradient(180deg,#070f16,#050a10);border:1px solid var(--line);
+  border-radius:14px;padding:16px;margin-bottom:16px}
+.chartwrap h3{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--slate2);
+  margin:0 0 12px;font-weight:600}
+canvas{width:100%;display:block}
+.legend{font-size:11px;color:var(--slate2);margin-top:8px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Claim<span>Guard</span></h1>
+        <p>Denial Radar · Pre-Submission</p>
+      </div>
+    </div>
+    <div class="ai-badge" id="aiBadge"><span class="dot"></span>booting…</div>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="scan" onclick="switchTab('scan')">◈ Single Scan</button>
+    <button class="tab" data-tab="batch" onclick="switchTab('batch')">▦ Batch Scan</button>
+    <button class="tab" data-tab="analytics" onclick="switchTab('analytics')">◔ Analytics</button>
+  </div>
+
+  <!-- ============ SINGLE SCAN VIEW ============ -->
+  <div class="view active" id="view-scan">
+
+  <!-- STAT STRIP -->
+  <div class="stats" id="stats"></div>
+
+  <!-- INTAKE + RESULT -->
+  <div class="grid">
+    <div class="panel">
+      <h2>Claim Intake</h2>
+      <div class="row">
+        <div><label>Patient</label><input id="f_patient" value="Reyes, D." /></div>
+        <div><label>Payer</label>
+          <select id="f_payer">
+            <option>Aetna</option><option>Cigna</option><option>UnitedHealth</option>
+            <option>Medicare</option><option>BlueCross</option>
+          </select>
+        </div>
+      </div>
+      <div class="row tri">
+        <div><label>CPT</label><input id="f_cpt" value="97110" /></div>
+        <div><label>ICD-10</label><input id="f_icd" value="M54.5" /></div>
+        <div><label>Amount $</label><input id="f_amount" type="number" value="680" /></div>
+      </div>
+      <div class="row tri">
+        <div><label>Modifier</label><input id="f_modifier" placeholder="-59 / -25 / none" /></div>
+        <div><label>Auth</label>
+          <select id="f_auth"><option>active</option><option>expired</option><option>missing</option></select>
+        </div>
+        <div><label>POS</label><input id="f_pos" value="11" /></div>
+      </div>
+      <div class="checkline"><input type="checkbox" id="f_tele"/><label style="margin:0;text-transform:none;letter-spacing:0;color:var(--slate)">Telehealth encounter</label></div>
+      <button class="btn" id="scanBtn" onclick="runScan()">▷ Scan for denials</button>
+      <p style="font-size:11px;color:var(--slate2);margin:12px 0 0;line-height:1.5">
+        Try presets: <a href="#" onclick="preset('cap');return false">payer cap</a> ·
+        <a href="#" onclick="preset('mod');return false">missing modifier</a> ·
+        <a href="#" onclick="preset('mis');return false">ICD mismatch</a> ·
+        <a href="#" onclick="preset('auth');return false">stale auth</a> ·
+        <a href="#" onclick="preset('clean');return false">clean</a>
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Analysis</h2>
+      <div class="scanbox" id="scanbox">
+        <div class="scan-grid"></div>
+        <div class="scanline"></div>
+        <div class="scan-msg" id="scanMsg">
+          <div class="big">Awaiting claim…</div>
+          <div style="font-size:11px;color:var(--slate2);margin-top:6px">Submit a claim to run the denial-pattern engine.</div>
+        </div>
+      </div>
+      <div id="result"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel full" style="margin-top:20px">
+    <h2>Claim Ledger</h2>
+    <div style="overflow-x:auto">
+      <table id="claimsTable">
+        <thead><tr>
+          <th>#</th><th>Patient</th><th>CPT</th><th>ICD</th><th>Payer</th><th>Amount</th>
+          <th>Risk</th><th>At Risk</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="claimsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AUTOPILOT -->
+  <div class="panel full" style="margin-top:20px">
+    <div class="ap-head">
+      <h2 style="margin:0">Auto-Appeal Autopilot</h2>
+      <div class="ap-controls">
+        <span class="safe-badge" title="Autopilot only auto-fixes safe, mechanical coding flags. High-$ / ambiguous claims are queued for a human.">🛡 SAFE-ACTIONS ONLY</span>
+        <label class="switch" title="Toggle hands-free auto-appeal">
+          <input type="checkbox" id="apToggle" onchange="toggleAutopilot()"/>
+          <span class="track"><span class="knob"></span></span>
+        </label>
+        <span class="ap-state" id="apStateLabel">AUTOPILOT OFF</span>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--slate2);margin:-4px 0 16px;line-height:1.5;max-width:820px">
+      Flip it on and ClaimGuard works the at-risk queue hands-free — drafting the correction + a one-line
+      appeal rationale, applying the fix and ticking up revenue protected. High-dollar or ambiguous claims
+      are held back and <b style="color:var(--warn)">queued for biller review</b>.</p>
+    <div class="ap-stats">
+      <div class="stat protect"><div class="k">Recovered (Autopilot)</div><div class="v" id="apRecovered">$0</div></div>
+      <div class="stat"><div class="k">Auto-Corrected</div><div class="v" id="apFixed">0</div></div>
+      <div class="stat risk"><div class="k">Queued for Review</div><div class="v" id="apQueued">0</div></div>
+      <div class="stat"><div class="k">Queue Remaining</div><div class="v" id="apRemaining">0</div></div>
+    </div>
+    <div class="ap-feed" id="apFeed">
+      <div class="ap-empty">Autopilot idle. Toggle it on to start recovering revenue hands-free.</div>
+    </div>
+  </div>
+
+  <!-- INTELLIGENCE + PRICING -->
+  <div class="grid" style="margin-top:20px">
+    <div class="panel">
+      <h2>Denial-Pattern Intelligence</h2>
+      <p style="font-size:11.5px;color:var(--slate2);margin:-8px 0 16px;line-height:1.5">
+        The proprietary ruleset that compounds with every claim scanned — top denial reasons learned across the practice.</p>
+      <div id="rules"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Value-Based Pricing</h2>
+      <div class="price-grid">
+        <div>
+          <label>Claims / month</label>
+          <input class="slider" type="range" id="p_vol" min="200" max="4000" step="50" value="900" oninput="calcPrice()"/>
+          <div class="sub" id="p_vol_l"></div>
+          <div style="height:14px"></div>
+          <label>Avg claim value $</label>
+          <input class="slider" type="range" id="p_val" min="80" max="600" step="10" value="180" oninput="calcPrice()"/>
+          <div class="sub" id="p_val_l"></div>
+          <div style="height:14px"></div>
+          <label>Success fee %</label>
+          <input class="slider" type="range" id="p_fee" min="5" max="25" step="1" value="12" oninput="calcPrice()"/>
+          <div class="sub" id="p_fee_l"></div>
+        </div>
+        <div style="text-align:center">
+          <div class="sub">Denials prevented / mo</div>
+          <div class="big-num" id="p_saved">$0</div>
+          <div style="height:16px"></div>
+          <div class="sub">Your fee (% of prevented)</div>
+          <div style="font-size:26px;font-weight:800;color:#fff" id="p_yourfee">$0</div>
+          <div style="height:14px"></div>
+          <div class="sub" style="line-height:1.5">Practice keeps <b style="color:var(--good)" id="p_keep">$0</b> it would have lost.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMBIENT MODE -->
+  <div class="panel full" style="margin-top:20px">
+    <div class="amb-head" style="margin-bottom:16px">
+      <h2 style="margin:0">Ambient Mode</h2>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="tag2036">VISION · 2036</span>
+        <button class="btn ghost" style="width:auto;padding:9px 16px" onclick="runAmbient()">◐ Simulate auto-appeal</button>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--slate2);margin:-4px 0 16px;line-height:1.5;max-width:760px">
+      Tomorrow's ClaimGuard doesn't just warn you — an ambient agent watches remits, detects the denial,
+      auto-corrects the claim and files the appeal with zero human touch. Press simulate.</p>
+    <div id="ambient"></div>
+  </div>
+
+  </div><!-- /view-scan -->
+
+  <!-- ============ BATCH SCAN VIEW ============ -->
+  <div class="view" id="view-batch">
+    <div class="panel full">
+      <h2>Batch Denial Scan</h2>
+      <p style="font-size:12px;color:var(--slate2);margin:-6px 0 16px;line-height:1.5;max-width:820px">
+        The scale moment for a practice — paste a CSV export (or a JSON array), or load a sample batch,
+        and run the whole day's claims through the denial-pattern engine at once. Analysis-only; nothing is written to the ledger.</p>
+      <label>Claims CSV <span style="text-transform:none;letter-spacing:0;color:var(--slate2)">— header row: patient,cpt,icd,payer,amount,modifier,auth_status,pos,telehealth</span></label>
+      <textarea id="batchInput" spellcheck="false" placeholder="patient,cpt,icd,payer,amount,modifier,auth_status,pos,telehealth&#10;Aguilar R.,20610,M17.11,UnitedHealth,210,,active,11,0"></textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn inline" onclick="runBatch()">▷ Run batch scan</button>
+        <button class="btn ghost inline" onclick="loadSampleBatch()">⇩ Load sample batch (12)</button>
+      </div>
+      <div id="batchAgg"></div>
+      <div id="batchResults" style="overflow-x:auto;margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ============ ANALYTICS VIEW ============ -->
+  <div class="view" id="view-analytics">
+    <div class="stats" id="anStats"></div>
+    <div class="grid">
+      <div class="panel">
+        <h2>At-Risk $ by Payer</h2>
+        <div class="chartwrap">
+          <h3>Exposure concentration</h3>
+          <canvas id="payerChart" height="220"></canvas>
+        </div>
+        <div id="payerLegend"></div>
+      </div>
+      <div class="panel">
+        <h2>Top Denial Reasons</h2>
+        <p style="font-size:11.5px;color:var(--slate2);margin:-8px 0 16px;line-height:1.5">
+          Ranked drivers of denials across every claim scanned by the practice.</p>
+        <div id="anReasons"></div>
+      </div>
+    </div>
+    <div class="panel full" style="margin-top:20px">
+      <h2>Denials Prevented · 12-Week Trend</h2>
+      <div class="chartwrap">
+        <h3>Recovered revenue per week</h3>
+        <canvas id="trendChart" height="240"></canvas>
+        <div class="legend" id="trendLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">ClaimGuard · self-contained demo · Python stdlib · port 8803 · <span id="aiFoot"></span></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const money=n=>'$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+const money2=n=>'$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+const PRESETS={
+  cap:{patient:'Reyes, D.',payer:'Aetna',cpt:'97110',icd:'M54.5',amount:680,modifier:'',auth:'active',pos:'11',tele:false},
+  mod:{patient:'Park, S.',payer:'UnitedHealth',cpt:'20610',icd:'M17.11',amount:210,modifier:'',auth:'active',pos:'11',tele:false},
+  mis:{patient:'Cole, R.',payer:'Cigna',cpt:'99214',icd:'Z00.00',amount:185,modifier:'',auth:'active',pos:'11',tele:false},
+  auth:{patient:'Vance, K.',payer:'BlueCross',cpt:'99215',icd:'I10',amount:240,modifier:'',auth:'expired',pos:'11',tele:false},
+  clean:{patient:'Ortiz, L.',payer:'Aetna',cpt:'99213',icd:'E11.9',amount:120,modifier:'',auth:'active',pos:'11',tele:false},
+};
+function preset(k){const p=PRESETS[k];if(!p)return;
+  $('#f_patient').value=p.patient;$('#f_payer').value=p.payer;$('#f_cpt').value=p.cpt;
+  $('#f_icd').value=p.icd;$('#f_amount').value=p.amount;$('#f_modifier').value=p.modifier;
+  $('#f_auth').value=p.auth;$('#f_pos').value=p.pos;$('#f_tele').checked=p.tele;}
+
+function readForm(){
+  return{patient:$('#f_patient').value,payer:$('#f_payer').value,cpt:$('#f_cpt').value,
+    icd:$('#f_icd').value,amount:parseFloat($('#f_amount').value||0),modifier:$('#f_modifier').value,
+    auth_status:$('#f_auth').value,pos:$('#f_pos').value,telehealth:$('#f_tele').checked?1:0};}
+
+function riskColor(r){return r>=70?'var(--danger)':r>=35?'var(--warn)':'var(--good)';}
+
+async function runScan(){
+  const box=$('#scanbox'),msg=$('#scanMsg'),res=$('#result');
+  box.classList.add('scanning');res.innerHTML='';
+  msg.innerHTML='<div class="big"><span class="spin"></span>&nbsp; Running denial-pattern engine…</div>'+
+    '<div style="font-size:11px;color:var(--slate2);margin-top:6px">Cross-checking CPT/ICD, payer caps, auth, modifiers</div>';
+  const payload=readForm();
+  let data;
+  try{const r=await fetch('/api/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});data=await r.json();}
+  catch(e){box.classList.remove('scanning');msg.innerHTML='<div class="big">Scan failed</div>';return;}
+  await new Promise(r=>setTimeout(r,1150)); // let scanner animate
+  box.classList.remove('scanning');
+  renderResult(data,msg,res);
+  loadDashboard();
+}
+
+function renderResult(data,msg,res){
+  const r=data.risk??0;
+  const circ=2*Math.PI*62, off=circ*(1-r/100);
+  msg.innerHTML=`<div class="gauge">
+    <svg width="150" height="150">
+      <circle cx="75" cy="75" r="62" stroke="rgba(255,255,255,.07)" stroke-width="11" fill="none"/>
+      <circle cx="75" cy="75" r="62" stroke="${riskColor(r)}" stroke-width="11" fill="none"
+        stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${off}"
+        style="filter:drop-shadow(0 0 8px ${riskColor(r)});transition:stroke-dashoffset .8s ease"/>
+    </svg>
+    <div class="lab"><div><div class="num" style="color:${riskColor(r)}">${r}</div><div class="cap">Denial Risk</div></div></div>
+  </div>`;
+  if(!data.flags||!data.flags.length){
+    res.innerHTML=`<div class="clean-msg"><div class="big">✓ Clean claim</div>
+      <div style="font-size:12px;color:var(--slate2);margin-top:6px">No denial patterns detected. Safe to submit.</div></div>`;
+    return;
+  }
+  let html=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 12px">
+    <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--slate)">${data.flags.length} flag${data.flags.length>1?'s':''}</div>
+    <div style="font-size:13px;color:var(--danger);font-weight:700">${money2(data.at_risk)} at risk</div></div>`;
+  data.flags.forEach(f=>{
+    html+=`<div class="flag">
+      <div class="top"><div class="name">⚑ ${f.name}</div><div class="amt">${money2(f.at_risk)}</div></div>
+      <div class="detail">${f.detail}</div>
+      <div class="fix"><b>Fix:</b> ${f.fix}</div></div>`;
+  });
+  if(data.claim&&data.claim.id){
+    html+=`<button class="btn ghost" onclick="markFixed(${data.claim.id})">✓ Mark corrected — protect ${money2(data.at_risk)}</button>`;
+  }
+  res.innerHTML=html;
+}
+
+async function markFixed(id){
+  await fetch('/api/fix',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
+  loadDashboard();
+  $('#result').innerHTML+='<div style="text-align:center;color:var(--teal);font-size:12px;margin-top:10px">✓ Revenue protected & logged.</div>';
+}
+
+async function loadDashboard(){
+  const r=await fetch('/api/dashboard');const d=await r.json();
+  const s=d.stats;
+  $('#stats').innerHTML=`
+    <div class="stat protect"><div class="k">Revenue Protected</div><div class="v">${money(s.protected)}</div></div>
+    <div class="stat risk"><div class="k">Open Exposure</div><div class="v">${money(s.exposure)}</div></div>
+    <div class="stat"><div class="k">Claims Scanned</div><div class="v">${s.total}</div></div>
+    <div class="stat"><div class="k">At-Risk / Clean</div><div class="v">${s.at_risk}<span style="font-size:15px;color:var(--slate2)"> / ${s.clean}</span></div></div>`;
+  const tb=$('#claimsBody');tb.innerHTML='';
+  d.claims.forEach(c=>{
+    const tr=document.createElement('tr');
+    const act=c.status==='At-Risk'?`<button class="mini-btn" onclick="markFixed(${c.id})">Fix</button>`:'';
+    tr.innerHTML=`<td style="color:var(--slate2)">${c.id}</td><td>${c.patient}</td>
+      <td>${c.cpt}</td><td>${c.icd}</td><td>${c.payer}</td><td>${money2(c.amount)}</td>
+      <td style="color:${riskColor(c.risk)};font-weight:700">${c.risk}</td>
+      <td style="color:${c.at_risk>0?'var(--danger)':'var(--slate2)'}">${c.at_risk>0?money2(c.at_risk):'—'}</td>
+      <td><span class="pill ${c.status}">${c.status}</span></td><td>${act}</td>`;
+    tb.appendChild(tr);
+  });
+  // intelligence
+  const maxHits=Math.max(1,...d.rules.map(x=>x.hits));
+  $('#rules').innerHTML=d.rules.map(x=>{
+    const pct=Math.round(x.hits/maxHits*100);
+    return `<div class="rule"><div class="rtop"><span class="rname">${x.name}</span>
+      <span class="rhits">${x.hits} hits · ${(x.base_rate*100).toFixed(0)}% base denial</span></div>
+      <div class="bar"><span style="width:${Math.max(pct,6)}%"></span></div></div>`;
+  }).join('');
+  // badge
+  $('#aiBadge').innerHTML=`<span class="dot"></span>${d.ai?'REAL Claude · sonnet-4-6':'MOCK explanations'}`;
+  $('#aiFoot').textContent=d.ai?'Claude-powered explanations active':'mock explanation fallback';
+}
+
+/* pricing */
+function calcPrice(){
+  const vol=+$('#p_vol').value, val=+$('#p_val').value, fee=+$('#p_fee').value;
+  const denialRate=0.11, catchRate=0.62; // industry ~11% denials, we prevent 62% pre-submission
+  const prevented=vol*denialRate*catchRate*val;
+  const yourFee=prevented*fee/100;
+  $('#p_vol_l').textContent=vol.toLocaleString()+' claims / mo';
+  $('#p_val_l').textContent=money(val)+' avg';
+  $('#p_fee_l').textContent=fee+'% success fee';
+  $('#p_saved').textContent=money(prevented);
+  $('#p_yourfee').textContent=money(yourFee);
+  $('#p_keep').textContent=money(prevented-yourFee);
+}
+
+/* ambient */
+async function runAmbient(){
+  const box=$('#ambient');
+  const r=await fetch('/api/ambient');const d=await r.json();
+  const icons=['◉','◎','✎','✉','▲','$'];
+  box.innerHTML=d.steps.map((s,i)=>`
+    <div class="step" id="amb${i}"><div class="ic">${icons[i]||'●'}</div>
+    <div><div class="st">${s.t}</div><div class="sd">${s.d}</div></div></div>`).join('');
+  d.steps.forEach((s,i)=>setTimeout(()=>$('#amb'+i).classList.add('on'),300+i*520));
+}
+
+/* ============ TABS ============ */
+let analyticsLoaded=false;
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+t).classList.add('active');
+  if(t==='analytics'){loadAnalytics();}
+}
+
+/* ============ BATCH SCAN ============ */
+function loadSampleBatch(){
+  const rows=[
+    ['Aguilar R.','20610','M17.11','UnitedHealth','210','','active','11','0'],
+    ['Bennett S.','99213','E11.9','Aetna','120','','active','11','0'],
+    ['Carter M.','99214','Z00.00','Cigna','185','','active','11','0'],
+    ['Delgado F.','97110','M54.5','Aetna','680','','active','11','0'],
+    ['Ellis T.','99215','I10','BlueCross','240','','expired','11','0'],
+    ['Frost L.','90837','F41.1','Cigna','160','','active','02','1'],
+    ['Gomez A.','36415','Z01.812','UnitedHealth','22','','active','11','0'],
+    ['Hale N.','97140','M25.511','Aetna','560','','active','11','0'],
+    ['Irwin P.','20610','M17.12','Cigna','205','','missing','11','0'],
+    ['Jansen D.','11042','L97.909','Medicare','340','-59','active','11','0'],
+    ['Kerr V.','99204','J45.909','BlueCross','260','','active','11','0'],
+    ['Long C.','99214','Z71.3','Medicare','185','','active','11','0'],
+  ];
+  const header='patient,cpt,icd,payer,amount,modifier,auth_status,pos,telehealth';
+  $('#batchInput').value=header+'\n'+rows.map(r=>r.join(',')).join('\n');
+}
+
+async function runBatch(){
+  const raw=$('#batchInput').value.trim();
+  const agg=$('#batchAgg'),out=$('#batchResults');
+  agg.innerHTML='';
+  if(!raw){out.innerHTML='<p style="color:var(--warn);font-size:12px;margin-top:16px">Paste a CSV or load the sample batch first.</p>';return;}
+  out.innerHTML='<p style="color:var(--slate2);font-size:12px;margin-top:16px"><span class="spin"></span>&nbsp; Scanning batch…</p>';
+  let data;
+  try{
+    const r=await fetch('/api/batch_scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({csv:raw})});
+    data=await r.json();
+  }catch(e){out.innerHTML='<p style="color:var(--danger)">Batch scan failed.</p>';return;}
+  if(data.error){out.innerHTML='<p style="color:var(--warn);font-size:12px;margin-top:16px">'+data.error+'</p>';return;}
+  renderBatch(data);
+}
+
+function renderBatch(data){
+  const a=data.aggregate;
+  $('#batchAgg').innerHTML=`<div class="agg">
+    <div class="stat risk"><div class="k">Total At-Risk</div><div class="v">${money(a.total_at_risk)}</div></div>
+    <div class="stat"><div class="k">Claims</div><div class="v">${a.total}</div></div>
+    <div class="stat protect"><div class="k">Clean Rate</div><div class="v">${a.clean_rate}%</div></div>
+    <div class="stat"><div class="k">At-Risk / Clean</div><div class="v">${a.at_risk}<span style="font-size:15px;color:var(--slate2)"> / ${a.clean}</span></div></div>
+  </div>`;
+  let topHtml='';
+  if(a.top_reasons&&a.top_reasons.length){
+    topHtml='<div style="margin:0 0 16px;font-size:12px;color:var(--slate)">Top reasons: '+
+      a.top_reasons.slice(0,4).map(r=>`<span style="color:var(--warn)">${r.name}</span> (${r.count})`).join(' · ')+'</div>';
+  }
+  let rows='';
+  data.results.forEach(c=>{
+    const col=c.risk>=70?'var(--danger)':c.risk>=35?'var(--warn)':'var(--good)';
+    const reasons=(c.flags||[]).map(f=>f.name).join(', ')||'—';
+    rows+=`<tr>
+      <td style="color:var(--slate2)">${c.n}</td><td>${c.patient}</td><td>${c.cpt}</td>
+      <td>${c.icd}</td><td>${c.payer}</td><td>${money2(c.amount)}</td>
+      <td><span class="risk-dot" style="background:${col}"></span><span style="color:${col};font-weight:700">${c.risk}</span></td>
+      <td style="color:${c.at_risk>0?'var(--danger)':'var(--slate2)'}">${c.at_risk>0?money2(c.at_risk):'—'}</td>
+      <td><span class="pill ${c.status}">${c.status}</span></td>
+      <td style="font-size:11px;color:var(--slate2)">${reasons}</td></tr>`;
+  });
+  $('#batchResults').innerHTML=topHtml+`<table>
+    <thead><tr><th>#</th><th>Patient</th><th>CPT</th><th>ICD</th><th>Payer</th><th>Amount</th>
+    <th>Risk</th><th>At Risk</th><th>Status</th><th>Reasons</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+/* ============ ANALYTICS ============ */
+async function loadAnalytics(){
+  const r=await fetch('/api/analytics');const d=await r.json();
+  $('#anStats').innerHTML=`
+    <div class="stat protect"><div class="k">Prevented (12wk)</div><div class="v">${money(d.trend_total)}</div></div>
+    <div class="stat protect"><div class="k">Clean Rate</div><div class="v">${d.clean_rate}%</div></div>
+    <div class="stat"><div class="k">Claims Analyzed</div><div class="v">${d.total_claims}</div></div>
+    <div class="stat risk"><div class="k">Payers At Risk</div><div class="v">${d.payer_breakdown.length}</div></div>`;
+  // reasons ranking
+  const maxR=Math.max(1,...d.top_reasons.map(x=>x.count));
+  $('#anReasons').innerHTML=d.top_reasons.length? d.top_reasons.map(x=>{
+    const pct=Math.round(x.count/maxR*100);
+    return `<div class="rule"><div class="rtop"><span class="rname">${x.name}</span>
+      <span class="rhits">${x.count} claim${x.count>1?'s':''}</span></div>
+      <div class="bar"><span style="width:${Math.max(pct,6)}%"></span></div></div>`;
+  }).join('') : '<p style="color:var(--slate2);font-size:12px">No denial patterns recorded yet.</p>';
+  drawPayerChart(d.payer_breakdown);
+  drawTrendChart(d.trend);
+  $('#trendLegend').textContent=`Total recovered across 12 weeks: ${money(d.trend_total)}`;
+  analyticsLoaded=true;
+}
+
+function fitCanvas(cv){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth||cv.parentElement.clientWidth;
+  const h=+cv.getAttribute('height');
+  cv.width=w*dpr;cv.height=h*dpr;
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+
+function drawPayerChart(rows){
+  const cv=$('#payerChart');const {ctx,w,h}=fitCanvas(cv);
+  ctx.clearRect(0,0,w,h);
+  if(!rows.length){ctx.fillStyle='#5f7286';ctx.font='13px monospace';ctx.fillText('No exposure data',12,h/2);$('#payerLegend').innerHTML='';return;}
+  const pad={l:12,r:12,t:12,b:30};
+  const max=Math.max(...rows.map(r=>r.at_risk),1);
+  const n=rows.length;
+  const bw=(w-pad.l-pad.r)/n*0.62;
+  const gap=(w-pad.l-pad.r)/n;
+  rows.forEach((r,i)=>{
+    const bh=(h-pad.t-pad.b)*(r.at_risk/max);
+    const x=pad.l+i*gap+(gap-bw)/2;
+    const y=h-pad.b-bh;
+    const grad=ctx.createLinearGradient(0,y,0,h-pad.b);
+    grad.addColorStop(0,'#2dd4bf');grad.addColorStop(1,'rgba(20,184,166,.35)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    const rr=5;
+    ctx.moveTo(x,y+rr);ctx.arcTo(x,y,x+rr,y,rr);ctx.lineTo(x+bw-rr,y);ctx.arcTo(x+bw,y,x+bw,y+rr,rr);
+    ctx.lineTo(x+bw,h-pad.b);ctx.lineTo(x,h-pad.b);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#93a4b8';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText(r.payer.length>9?r.payer.slice(0,8)+'…':r.payer,x+bw/2,h-pad.b+16);
+    ctx.fillStyle='#eef4f8';ctx.font='700 10px monospace';
+    ctx.fillText('$'+Math.round(r.at_risk),x+bw/2,y-5);
+  });
+  $('#payerLegend').innerHTML=rows.map(r=>
+    `<span style="display:inline-block;margin:4px 10px 0 0;font-size:11px;color:var(--slate)"><span style="color:var(--teal)">■</span> ${r.payer}: ${money2(r.at_risk)}</span>`).join('');
+}
+
+function drawTrendChart(weeks){
+  const cv=$('#trendChart');const {ctx,w,h}=fitCanvas(cv);
+  ctx.clearRect(0,0,w,h);
+  if(!weeks.length)return;
+  const pad={l:44,r:14,t:16,b:26};
+  const max=Math.max(...weeks.map(x=>x.prevented))*1.1;
+  const min=0;
+  const px=i=>pad.l+(w-pad.l-pad.r)*(i/(weeks.length-1));
+  const py=v=>h-pad.b-(h-pad.t-pad.b)*((v-min)/(max-min));
+  // grid + y labels
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.fillStyle='#5f7286';ctx.font='9px monospace';ctx.textAlign='right';
+  for(let g=0;g<=4;g++){
+    const v=max*g/4;const y=py(v);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    ctx.fillText('$'+Math.round(v),pad.l-6,y+3);
+  }
+  // area fill
+  ctx.beginPath();ctx.moveTo(px(0),py(weeks[0].prevented));
+  weeks.forEach((x,i)=>ctx.lineTo(px(i),py(x.prevented)));
+  ctx.lineTo(px(weeks.length-1),h-pad.b);ctx.lineTo(px(0),h-pad.b);ctx.closePath();
+  const ag=ctx.createLinearGradient(0,pad.t,0,h-pad.b);
+  ag.addColorStop(0,'rgba(45,212,191,.28)');ag.addColorStop(1,'rgba(45,212,191,0)');
+  ctx.fillStyle=ag;ctx.fill();
+  // line
+  ctx.beginPath();ctx.moveTo(px(0),py(weeks[0].prevented));
+  weeks.forEach((x,i)=>ctx.lineTo(px(i),py(x.prevented)));
+  ctx.strokeStyle='#2dd4bf';ctx.lineWidth=2.4;ctx.shadowColor='rgba(45,212,191,.6)';ctx.shadowBlur=10;ctx.stroke();
+  ctx.shadowBlur=0;
+  // points + x labels
+  ctx.textAlign='center';
+  weeks.forEach((x,i)=>{
+    ctx.beginPath();ctx.arc(px(i),py(x.prevented),3,0,7);ctx.fillStyle='#2dd4bf';ctx.fill();
+    ctx.fillStyle='#5f7286';ctx.font='9px monospace';
+    if(i%2===0)ctx.fillText(x.week,px(i),h-pad.b+15);
+  });
+}
+window.addEventListener('resize',()=>{if($('#view-analytics').classList.contains('active')&&analyticsLoaded)loadAnalytics();});
+
+/* ============ AUTOPILOT ============ */
+let apRunning=false, apTimer=null, apBusy=false, apSeen=new Set();
+
+function renderApState(st){
+  if(!st)return;
+  $('#apRecovered').textContent=money(st.recovered_total);
+  $('#apFixed').textContent=st.fixed_count;
+  $('#apQueued').textContent=st.needs_review;
+  if('remaining' in st) $('#apRemaining').textContent=st.remaining;
+}
+
+function apFeedRow(step){
+  const feed=$('#apFeed');
+  const empty=feed.querySelector('.ap-empty'); if(empty)empty.remove();
+  const corrected=step.action==='corrected';
+  const row=document.createElement('div');
+  row.className='ap-row';
+  const right=corrected
+    ? `<span class="rec">+${money2(step.recovered)}</span>`
+    : `<span class="qd">QUEUED FOR REVIEW</span>`;
+  row.innerHTML=`
+    <div class="ap-ic ${step.action}">${corrected?'✓':'⏸'}</div>
+    <div class="ap-body">
+      <div class="ap-title"><span>#${step.claim} · ${step.patient||''} · ${step.cpt||''} · ${step.payer||''}</span>${right}</div>
+      <div class="ap-sub">${corrected?('<b style="color:var(--teal)">'+ (step.correction||'Correction applied') +'</b> — '):''}${step.rationale||''}</div>
+      <div class="ap-ts">${step.flag||''}${step.amount?(' · claim '+money2(step.amount)):''}</div>
+    </div>`;
+  feed.insertBefore(row,feed.firstChild);
+}
+
+async function autopilotStep(){
+  if(apBusy||!apRunning)return;
+  apBusy=true;
+  try{
+    const r=await fetch('/api/autopilot/step',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+    const d=await r.json();
+    if(d.state)renderApState(d.state);
+    if(d.done){
+      stopAutopilot();
+      $('#apStateLabel').textContent='QUEUE CLEARED';
+      const feed=$('#apFeed');
+      if(!feed.querySelector('.ap-done')){
+        const done=document.createElement('div');
+        done.className='ap-empty ap-done';done.style.color='var(--teal)';
+        done.textContent='✓ Autopilot cleared the at-risk queue. Nothing left to auto-appeal.';
+        feed.insertBefore(done,feed.firstChild);
+      }
+      loadDashboard();
+      return;
+    }
+    if(!apSeen.has(d.claim)){apSeen.add(d.claim);apFeedRow(d);}
+    loadDashboard(); // revenue-protected counter ticks up
+  }catch(e){/* keep running; transient */}
+  finally{apBusy=false;}
+}
+
+function startAutopilot(){
+  apRunning=true;
+  $('#apStateLabel').textContent='AUTOPILOT ON';
+  $('#apStateLabel').classList.add('on');
+  autopilotStep();                       // fire immediately
+  apTimer=setInterval(autopilotStep,4000); // then every ~4s
+}
+function stopAutopilot(){
+  apRunning=false;
+  if(apTimer){clearInterval(apTimer);apTimer=null;}
+  $('#apStateLabel').classList.remove('on');
+  if($('#apStateLabel').textContent==='AUTOPILOT ON')$('#apStateLabel').textContent='AUTOPILOT OFF';
+}
+function toggleAutopilot(){ $('#apToggle').checked ? startAutopilot() : stopAutopilot(); }
+
+async function initAutopilot(){
+  try{
+    const [sr,lr]=await Promise.all([fetch('/api/autopilot/state'),fetch('/api/autopilot/log')]);
+    const st=await sr.json(), lg=await lr.json();
+    renderApState(st);
+    const feed=$('#apFeed');
+    if(lg.log&&lg.log.length){
+      feed.innerHTML='';
+      lg.log.slice().reverse().forEach(e=>{
+        apSeen.add(e.claim);
+        apFeedRow({action:e.action,claim:e.claim,patient:e.patient,recovered:e.recovered,
+          correction:null,rationale:e.rationale,flag:e.action==='corrected'?'auto-corrected':'held',amount:0});
+      });
+    }
+  }catch(e){/* ignore */}
+}
+
+/* init */
+calcPrice();
+loadDashboard();
+initAutopilot();
+</script>
+</body>
+</html>
