@@ -4,3 +4,7 @@ __pycache__/
 *.pid
 .env
 .DS_Store
+
+# local env files and backups
+.env*
+!.env.example
